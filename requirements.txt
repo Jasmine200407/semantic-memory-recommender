@@ -1,0 +1,26 @@
+# Core dependencies
+langchain>=0.3.0
+langgraph>=0.2.0
+pydantic>=2.8.0
+python-dotenv>=1.0.0
+
+# Machine Learning & NLP
+torch>=2.0.0
+sentence-transformers>=2.2.2
+transformers>=4.40.0
+numpy>=1.25.0
+
+# Web scraping & API
+requests>=2.31.0
+playwright>=1.43.0
+
+# Google & Gemini
+google-generativeai>=0.5.4
+
+# Utilities
+concurrent-log-handler>=0.9.24
+tqdm>=4.66.0
+
+# Optional (for development)
+ipython
+rich

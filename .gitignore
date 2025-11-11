@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs and cache
+*.log
+*.tmp
+*.bak
+.cache/
+__logs__/
+debug.log
+
+# Playwright
+playwright-report/
+test-results/
+trace.zip
+
+# Data and outputs
+data/reviews/
+data/vectors/
+data/recommendations/
+output/
+*.jsonl
+*.csv
+
+# Environment
+.env
+*.env
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+*.ipynb
+profile_default/
+ipython_config.py
+
+# Others
+*.sqlite3
+*.db
+*.pkl
+*.ckpt
