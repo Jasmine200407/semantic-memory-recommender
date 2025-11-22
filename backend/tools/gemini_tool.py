@@ -51,7 +51,23 @@ def generate_reason(name, summary, preferences=None, match_score=None):
         print(f"⚠️ Gemini 生成失敗：{e}")
         time.sleep(1)
         return f"{name} 的風格很符合你想要的『{pref_text}』氛圍，值得一試！"
-
+def call_gemini(prompt: str, model: str = "gemini-2.5-flash", temperature: float = 0.3) -> str:
+    """
+    呼叫 Gemini 模型，回傳純文字內容。
+    Args:
+        prompt (str): 要輸入的提示字串。
+        model (str): 模型名稱，預設 "gemini-1.5-flash"。
+        temperature (float): 生成溫度，控制創造性。
+    Returns:
+        str: 模型回傳的文字結果。
+    """
+    try:
+        gemini_model = genai.GenerativeModel(model)
+        response = gemini_model.generate_content(prompt, generation_config={"temperature": temperature})
+        return response.text.strip()
+    except Exception as e:
+        print(f"⚠️ Gemini 呼叫失敗: {e}")
+        return ""
 
 # ────────────────────────────────
 # 🧰 LangChain Tool 包裝

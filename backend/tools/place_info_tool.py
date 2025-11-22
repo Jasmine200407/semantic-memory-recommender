@@ -11,6 +11,9 @@
 import os
 import requests
 from dotenv import load_dotenv
+from langchain.tools import BaseTool
+from pydantic import BaseModel, Field
+from typing import Type, Optional
 
 # ────────────────────────────────
 # ⚙️ 初始化環境變數
@@ -24,9 +27,6 @@ if not GOOGLE_API_KEY:
 # ────────────────────────────────
 # 📍 檢查地點是否過大
 # ────────────────────────────────
-import requests
-import os
-
 def location_is_too_large(location: str) -> bool:
     """
     根據地點的經緯度範圍判斷是否過大。
@@ -36,19 +36,19 @@ def location_is_too_large(location: str) -> bool:
     if not location:
         return True
 
-    api_key = os.getenv("GOOGLE_PLACE_API_KEY")
+    api_key = GOOGLE_API_KEY
     if not api_key:
         print("⚠️ 未設定 GOOGLE_API_KEY，跳過範圍檢查。")
         return False
 
     try:
         url = f"https://maps.googleapis.com/maps/api/geocode/json?address={location}&key={api_key}"
-        resp = requests.get(url, timeout=10)  # ✅ 設定 10 秒 timeout
+        resp = requests.get(url, timeout=10)
         data = resp.json()
 
         if data.get("status") != "OK" or not data.get("results"):
             print(f"⚠️ 無法解析地點：{location}")
-            return True  # 若地點模糊或無效則視為太廣
+            return True
 
         geometry = data["results"][0].get("geometry", {})
         viewport = geometry.get("viewport")
@@ -70,66 +70,149 @@ def location_is_too_large(location: str) -> bool:
         print(f"❌ 檢查地點範圍時發生錯誤：{e}")
         return False
 
+
 # ────────────────────────────────
 # 🍽️ 搜尋餐廳
 # ────────────────────────────────
+# def search_restaurants(location: str, category: str, radius: int = 2000, max_results: int = 10):
+#     """
+#     使用 Google Places Text Search API 搜尋餐廳資訊。
+
+#     Args:
+#         location (str): 使用者指定的地點（例如「信義區」）
+#         category (str): 餐廳主題（例如「火鍋」、「早午餐」）
+#         radius (int): 搜尋範圍（公尺）
+#         max_results (int): 取回的最大餐廳數量
+
+#     Returns:
+#         list[dict]: 餐廳資訊列表，每筆包含名稱、ID、評分、地址與地圖連結。
+#     """
+#     query = f"{location} {category} 餐廳"
+#     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+#     params = {
+#         "query": query,
+#         "type": "restaurant",
+#         "language": "zh-TW",
+#         "key": GOOGLE_API_KEY,
+#     }
+
+#     try:
+#         response = requests.get(url, params=params)
+#         data = response.json()
+#         status = data.get("status")
+
+#         if status != "OK":
+#             print(f"⚠️ Google Places API 錯誤：{status}")
+#             return []
+
+#         restaurants = []
+#         for item in data.get("results", [])[:max_results]:
+#             restaurants.append({
+#                 "name": item.get("name"),
+#                 "place_id": item.get("place_id"),
+#                 "rating": item.get("rating", 0),
+#                 "user_ratings_total": item.get("user_ratings_total", 0),
+#                 "address": item.get("formatted_address", ""),
+#                 "map_url": f"https://www.google.com/maps/place/?q=place_id:{item.get('place_id')}",
+#             })
+
+#         return restaurants
+
+#     except Exception as e:
+#         print(f"❌ 餐廳搜尋失敗：{e}")
+#         return []
+import requests
 def search_restaurants(location: str, category: str, radius: int = 2000, max_results: int = 10):
-    """
-    使用 Google Places Text Search API 搜尋餐廳資訊。
-    
-    Args:
-        location (str): 使用者指定的地點（例如「信義區」）
-        category (str): 餐廳主題（例如「火鍋」、「早午餐」）
-        radius (int): 搜尋範圍（公尺）
-        max_results (int): 取回的最大餐廳數量
-
-    Returns:
-        list[dict]: 餐廳資訊列表，每筆包含名稱、ID、評分、地址與地圖連結。
-    """
-    query = f"{location} {category} 餐廳"
-    url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
-    params = {
-        "query": query,
-        "type": "restaurant",
-        "language": "zh-TW",
+    geocode_url = "https://maps.googleapis.com/maps/api/geocode/json"
+    geo_params = {
+        "address": location,
         "key": GOOGLE_API_KEY,
+        "language": "zh-TW"
     }
-
-    try:
-        response = requests.get(url, params=params)
-        data = response.json()
-        status = data.get("status")
-
-        if status != "OK":
-            print(f"⚠️ Google Places API 錯誤：{status}")
-            return []
-
-        restaurants = []
-        for item in data.get("results", [])[:max_results]:
-            restaurants.append({
-                "name": item.get("name"),
-                "place_id": item.get("place_id"),
-                "rating": item.get("rating", 0),
-                "user_ratings_total": item.get("user_ratings_total", 0),
-                "address": item.get("formatted_address", ""),
-                "map_url": f"https://www.google.com/maps/place/?q=place_id:{item.get('place_id')}",
-            })
-
-        return restaurants
-
-    except Exception as e:
-        print(f"❌ 餐廳搜尋失敗：{e}")
+    geo_res = requests.get(geocode_url, params=geo_params).json()
+    if geo_res.get("status") != "OK":
+        print(f"⚠️ 地理編碼失敗：{geo_res.get('status')}")
         return []
 
+    lat = geo_res["results"][0]["geometry"]["location"]["lat"]
+    lng = geo_res["results"][0]["geometry"]["location"]["lng"]
+
+    nearby_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+    nearby_params = {
+        "location": f"{lat},{lng}",
+        "radius": radius,
+        "keyword": category,
+        "type": "restaurant",
+        "key": GOOGLE_API_KEY,
+        "language": "zh-TW"
+    }
+    res = requests.get(nearby_url, params=nearby_params).json()
+    if res.get("status") != "OK":
+        print(f"⚠️ 搜尋失敗：{res.get('status')}")
+        return []
+
+    restaurants = []
+    for item in res.get("results", [])[:max_results]:
+        place_id = item.get("place_id")
+        if not place_id:
+            continue
+
+        # 🔍 補全 Place Details 拿完整資料
+        details_url = "https://maps.googleapis.com/maps/api/place/details/json"
+        details_params = {
+            "place_id": place_id,
+            "fields": "formatted_address,formatted_phone_number,website,opening_hours,price_level,url",
+            "language": "zh-TW",
+            "key": GOOGLE_API_KEY
+        }
+        details_res = requests.get(details_url, params=details_params).json()
+        d = details_res.get("result", {}) if details_res.get("status") == "OK" else {}
+
+        restaurants.append({
+            "name": item.get("name"),
+            "place_id": place_id,
+            "rating": item.get("rating", 0),
+            "user_ratings_total": item.get("user_ratings_total", 0),
+            "address": d.get("formatted_address", item.get("vicinity", "")),  # ← 完整地址
+            "map_url": f"https://www.google.com/maps/place/?q=place_id:{place_id}",
+            "phone": d.get("formatted_phone_number"),
+            "website": d.get("website"),
+            "price_level": d.get("price_level"),
+            "opening_hours": d.get("opening_hours", {}).get("weekday_text")
+        })
+
+    return restaurants
 
 # ────────────────────────────────
-# 🧪 測試執行（開發時用）
+# 🧩 LangChain Tool 包裝
+# ────────────────────────────────
+class PlaceSearchInput(BaseModel):
+    location: str = Field(..., description="搜尋地點，例如：台北信義區")
+    category: str = Field(..., description="餐廳類別，例如：火鍋、壽司、早午餐")
+    radius: Optional[int] = Field(default=2000, description="搜尋半徑（公尺）")
+    max_results: Optional[int] = Field(default=10, description="最多回傳筆數")
+
+
+class PlaceSearchTool(BaseTool):
+    name: str = Field(default="place_search_tool")
+    description: str = Field(default="搜尋指定地點與餐廳類別的 Google Maps 餐廳資料")
+    args_schema: Type[BaseModel] = PlaceSearchInput
+
+    def _run(self, location: str, category: str, radius: int = 2000, max_results: int = 10):
+        return search_restaurants(location, category, radius, max_results)
+
+    async def _arun(self, **kwargs):
+        raise NotImplementedError("不支援 async 模式")
+
+
+# ────────────────────────────────
+# 🧪 測試執行（開發用）
 # ────────────────────────────────
 if __name__ == "__main__":
-    location = "信義區"
+    location = "中央大學"
     category = "火鍋"
     print(f"🔍 測試搜尋：{location} 的 {category} 餐廳...")
-    results = search_restaurants(location, category)
+    results = search_restaurants(location, category,2000,3)
     print(f"共找到 {len(results)} 間：")
     for r in results:
         print(f"- {r['name']}（⭐ {r['rating']}）→ {r['map_url']}")

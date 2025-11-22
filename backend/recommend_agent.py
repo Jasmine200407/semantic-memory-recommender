@@ -1,253 +1,224 @@
+# -*- coding: utf-8 -*-
 """
-🧭 LangGraph Node-based Restaurant Recommender
-───────────────────────────────────────────────
-版本：正式穩定版（Gemini 2.5-flash）
-特性：
-- 自動引導式輸入檢查（地點 / 主題不足時 Retry）
-- 多執行緒抓取評論（同時 3 間）
-- 多權重加權排序（match_score, positive_rate, rating）
-- 雙層輸出：完整 + latest_recommendation.json（精簡版）
-───────────────────────────────────────────────
+RecommendAgent with debug logging (no emojis)
 """
 
 import os
+import re
 import json
-import time
 import datetime
 import concurrent.futures
-from langgraph.graph import StateGraph, START, END
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel
 
-# === 工具匯入（無 backend prefix） ===
-from tools.place_info_tool import search_restaurants, location_is_too_large
+from pydantic import BaseModel
+from langgraph.graph import StateGraph, START, END
+
+from tools.place_info_tool import search_restaurants
 from tools.review_scraper_tool import get_all_reviews
 from tools.embedding_tool import analyze_reviews
-from tools.gemini_tool import generate_reason
+from tools.gemini_tool import call_gemini, generate_reason
 from tools.save_json import save_json
 
 
-# ────────────────────────────────
-# 🌟 RecommendAgent 主類別
-# ────────────────────────────────
+# ============ 自然語言分析 ============
+
+def parse_user_input(user_input: str) -> Optional[Dict[str, Any]]:
+    prompt = f"""
+    將以下使用者需求整理成 JSON：
+    「{user_input}」
+    回傳格式：
+    {{
+      "location": "地點",
+      "category": "種類（火鍋/壽司/燒肉...）",
+      "preferences": ["偏好"]
+    }}
+    若無偏好→["一般用餐需求"]
+    僅輸出 JSON。
+    """
+    try:
+        raw = call_gemini(prompt).strip()
+        print("[parse_user_input] Gemini 原始回傳：", raw)
+
+        # 移除可能的 ```json``` 區塊標記
+        raw = re.sub(r"```(?:json)?(.*?)```", r"\1", raw, flags=re.DOTALL).strip()
+
+        # 嘗試只截取最外層的 JSON 區塊
+        start_idx = raw.find("{")
+        end_idx = raw.rfind("}")
+        if start_idx == -1 or end_idx == -1:
+            raise ValueError("找不到有效的 JSON 區塊")
+
+        json_str = raw[start_idx: end_idx + 1]
+        data = json.loads(json_str)
+        print("[parse_user_input] 解析後 JSON：", data)
+
+        if isinstance(data.get("preferences"), str):
+            data["preferences"] = [data["preferences"]]
+
+        if not data.get("preferences"):
+            data["preferences"] = ["一般用餐需求"]
+
+        return data
+    except Exception as e:
+        print("[parse_user_input] 解析失敗：", e)
+        return None
+
+
+# ============ RecommendAgent 核心 ============
+
 class RecommendAgent:
     def __init__(self):
         self.review_dir = "data/reviews"
-        self.vector_dir = "data/vectors"
-        self.output_dir = "data/recommendations"
+        self.restaurant_list_dir = "data/restaurant_list"
+        self.recommendations_dir = "data/recommendations"
         os.makedirs(self.review_dir, exist_ok=True)
-        os.makedirs(self.vector_dir, exist_ok=True)
-        os.makedirs(self.output_dir, exist_ok=True)
+        os.makedirs(self.restaurant_list_dir, exist_ok=True)
+        os.makedirs(self.recommendations_dir, exist_ok=True)
 
-        # 權重設計（可依需求微調）
+        self.max_reviews = 80
+        self.cache_days = 30
         self.weights = {"match_score": 0.7, "positive_rate": 0.2, "rating": 0.1}
 
-    # 檢查評論快取（30 天內）
-    def check_cache(self, place_id):
-        path = os.path.join(self.review_dir, f"{place_id}.json")
-        if os.path.exists(path):
-            days = (datetime.datetime.now() - datetime.datetime.fromtimestamp(os.path.getmtime(path))).days
-            if days <= 30:
-                with open(path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+    def _safe_name(self, name: str) -> str:
+        return re.sub(r"[^\w\u4e00-\u9fa5]+", "_", name).strip("_")
+
+    def _review_cache_path(self, name: str) -> str:
+        return os.path.join(self.review_dir, f"{self._safe_name(name)}.json")
+
+    # -- 使用一個月內 cache --
+    def check_cache(self, name: str) -> Optional[List[Dict[str, Any]]]:
+        path = self._review_cache_path(name)
+        if not os.path.exists(path):
+            print(f"[check_cache] {name} 尚無快取檔")
+            return None
+
+        mtime = datetime.datetime.fromtimestamp(os.path.getmtime(path))
+        diff_days = (datetime.datetime.now() - mtime).days
+        print(f"[check_cache] {name} 快取檔更新日：{mtime.date()}，距今 {diff_days} 天")
+
+        if diff_days > self.cache_days:
+            print(f"[check_cache] {name} 快取超過 {self.cache_days} 天，不使用")
+            return None
+
+        try:
+            data = json.load(open(path, encoding="utf-8"))
+            reviews = data.get("reviews", [])
+            print(f"[check_cache] 讀取到 reviews 數量：{len(reviews)}")
+            return reviews
+        except Exception as e:
+            print(f"[check_cache] 讀取快取失敗：", e)
+            return None
+
+    # -- 單店評論爬取 --
+    def fetch_single(self, restaurant):
+        name = restaurant.get("name")
+        place_id = restaurant.get("place_id")
+        print(f"[fetch_single] 處理餐廳：{name} ({place_id})")
+
+        if not name or not place_id:
+            print("[fetch_single] 缺少名稱或 place_id，略過")
+            return None
+
+        # 先看 cache
+        cache = self.check_cache(name)
+        if cache:
+            print(f"[fetch_single] 使用快取：{name}，評論數：{len(cache)}")
+            return {"restaurant": restaurant, "reviews": cache}
+
+        print(f"[fetch_single] 沒有快取，開始爬取：{name}")
+        reviews = get_all_reviews(name, place_id, max_reviews=self.max_reviews)
+        print(f"[fetch_single] {name} 實際抓到評論數：{len(reviews) if reviews else 0}")
+
+        if reviews:
+            today = datetime.datetime.now().strftime("%Y-%m-%d")
+            try:
+                save_json.invoke({
+                    "data": {
+                        "place_id": place_id,
+                        "name": name,
+                        "address": restaurant.get("address"),
+                        "rating": restaurant.get("rating"),
+                        "user_ratings_total": restaurant.get("user_ratings_total"),
+                        "last_update": today,
+                        "reviews": reviews,
+                    },
+                    "path": self._review_cache_path(name),
+                })
+                print(f"[fetch_single] 已寫入快取：{self._review_cache_path(name)}")
+            except Exception as e:
+                print(f"[fetch_single] 寫入快取失敗：", e)
+
+            return {"restaurant": restaurant, "reviews": reviews}
+
+        print(f"[fetch_single] {name} 沒有成功取得評論")
         return None
 
-    # 抓取單一餐廳評論（含快取）
-    def fetch_single(self, restaurant):
-        pid, name = restaurant["place_id"], restaurant["name"]
-        cache = self.check_cache(pid)
-        if cache:
-            return cache
-        reviews = get_all_reviews(name, pid)
-        if reviews:
-            save_json(reviews, os.path.join(self.review_dir, f"{pid}.json"))
-        return reviews
-
-    # 批次抓取評論（同時 3 間）
-    def fetch_reviews_batch(self, batch):
+    # -- 批次爬取 --
+    def fetch_reviews_batch(self, restaurants):
+        print(f"[fetch_reviews_batch] 準備處理餐廳數量：{len(restaurants)}")
         results = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-            futures = {executor.submit(self.fetch_single, r): r for r in batch}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as exe:
+            futures = [exe.submit(self.fetch_single, r) for r in restaurants]
             for f in concurrent.futures.as_completed(futures):
-                r = futures[f]
                 try:
-                    reviews = f.result()
-                    if reviews:
-                        results.append({"restaurant": r, "reviews": reviews})
+                    res = f.result()
+                    if res:
+                        results.append(res)
                 except Exception as e:
-                    print(f"❌ {r['name']} 發生錯誤：{e}")
+                    print("[fetch_reviews_batch] future 發生錯誤：", e)
+
+        print(f"[fetch_reviews_batch] 成功取得評論的餐廳數量：{len(results)}")
         return results
 
-    # 分析評論、生成推薦理由並儲存
-    def analyze_and_save(self, restaurant, reviews, preferences):
-        name, pid = restaurant["name"], restaurant["place_id"]
-        analysis = analyze_reviews(reviews, preferences)
-        reason = generate_reason(name, analysis.get("summary", ""), preferences)
-        record = {
-            "name": name,
-            "map_url": restaurant["map_url"],
-            "rating": restaurant.get("rating", 0),
-            "user_ratings_total": restaurant.get("user_ratings_total", 0),
-            "summary": analysis.get("summary", ""),
-            "reason": reason,
-            "match_score": analysis.get("match_score", 0),
-            "positive_rate": analysis.get("positive_rate", 0)
-        }
-        save_json(record, os.path.join(self.vector_dir, f"{pid}.json"))
-        return record
-# ────────────────────────────────
-# 🔹 Node 定義區
-# ────────────────────────────────
+    # -- NLP 分析 --
+    def analyze_results(self, review_batches, prefs):
+        print("[analyze_results] 進來的餐廳數量：", len(review_batches))
+        print("[analyze_results] 使用者偏好：", prefs)
+
+        output = []
+        for rb in review_batches:
+            r, reviews = rb["restaurant"], rb["reviews"]
+            print(f"[analyze_results] 處理餐廳：{r.get('name')}，評論數：{len(reviews)}")
+
+            try:
+                res = analyze_reviews(reviews, prefs)
+                print(
+                    f"[analyze_results] NLP 結果：match={res.get('match_score')}, "
+                    f"positive_rate={res.get('positive_rate')}"
+                )
+                print(
+                    "[analyze_results] 摘要片段：",
+                    (res.get("summary") or "")[:50]
+                )
+            except Exception as e:
+                print("[analyze_results] analyze_reviews 發生錯誤：", e)
+                res = {"summary": "", "match_score": 0.0, "positive_rate": 0.0}
+
+            try:
+                reason_text = generate_reason(r["name"], res.get("summary", ""), prefs)
+            except Exception as e:
+                print("[analyze_results] generate_reason 發生錯誤：", e)
+                reason_text = "系統暫時無法提供詳細理由，建議可先參考整體評價與評論內容。"
+
+            output.append({
+                **r,
+                "summary": res.get("summary", ""),
+                "match_score": float(res.get("match_score", 0) or 0.0),
+                "positive_rate": float(res.get("positive_rate", 0) or 0.0),
+                "reason": reason_text,
+            })
+
+        print("[analyze_results] 最終輸出餐廳數量：", len(output))
+        return output
+
+
 agent = RecommendAgent()
-# 🟩 1️⃣ Start Node — 驗證輸入
-def start_node(state):
-    """
-    驗證使用者輸入的地點與餐廳類別。
-    若資訊不足或範圍過大，返回 retry_node。
-    """
-    user_input = state.user_input or {}
-    location = user_input.get("location")
-    category = user_input.get("category")
-
-    if not location:
-        return {"next": "retry_node", "message": "請輸入明確地點（例如：信義區、市府站）。"}
-    if not category:
-        return {"next": "retry_node", "message": "請告訴我想吃什麼（例如：火鍋、壽司、咖啡廳）。"}
-    if location_is_too_large(location):
-        return {"next": "retry_node", "message": "地點範圍過大，請縮小搜尋範圍（例如：台北信義區，而非整個台北市）。"}
-
-    print(f"✅ 已確認輸入：地點={location}，主題={category}")
-    return {"next": "place_search_node", "location": location, "category": category}
 
 
-# 🟦 2️⃣ Place Search Node — 搜尋餐廳
-def place_search_node(state):
-    """
-    透過 Google Place API 搜尋指定地點與類別的餐廳。
-    若無結果則重試。
-    """
-    location, category = state.location, state.category
-    print(f"🔍 搜尋 {location} 的 {category} 餐廳中...")
-
-    restaurants = search_restaurants(location, category, radius=3000, max_results=10)
-    if not restaurants:
-        return {"next": "retry_node", "message": "找不到相關餐廳，請嘗試其他區域或主題。"}
-
-    print(f"🍽️ 共找到 {len(restaurants)} 間餐廳。")
-    return {"next": "review_fetch_node", "restaurants": restaurants}
-
-
-# 🟨 3️⃣ Review Fetch Node — 抓取評論
-def review_fetch_node(state):
-    """
-    並行抓取多家餐廳評論，每次最多三家。
-    若無評論則重新嘗試。
-    """
-    restaurants = state.restaurants
-    print(f"📥 開始抓取餐廳評論，共 {len(restaurants)} 間...")
-
-    all_reviews = []
-    for i in range(0, len(restaurants), 3):
-        batch = restaurants[i:i + 3]
-        fetched = agent.fetch_reviews_batch(batch)
-        all_reviews.extend(fetched)
-        time.sleep(0.8)
-
-    if not all_reviews:
-        return {"next": "retry_node", "message": "評論擷取失敗，請稍後再試。"}
-
-    print(f"✅ 已成功擷取 {len(all_reviews)} 間餐廳評論。")
-    return {"next": "vector_analysis_node", "review_batches": all_reviews}
-
-
-# 🟧 4️⃣ Vector Analysis Node — 向量化與摘要分析
-def vector_analysis_node(state):
-    """
-    將評論向量化並分析使用者偏好相關度。
-    每家餐廳生成摘要與推薦理由。
-    """
-    prefs = state.preferences or []
-    reviews_batch = state.review_batches
-    print("🧠 開始語意分析與摘要...")
-
-    analyzed = []
-    for item in reviews_batch:
-        r = item["restaurant"]
-        rev = item["reviews"]
-        record = agent.analyze_and_save(r, rev, prefs)
-        analyzed.append(record)
-
-    print(f"✅ 已分析完成 {len(analyzed)} 間餐廳。")
-    return {"next": "ranking_node", "analyzed": analyzed}
-
-
-# 🟥 5️⃣ Ranking Node — 加權排序與結果儲存
-def ranking_node(state):
-    """
-    根據 match_score / positive_rate / rating 權重排序，
-    並輸出 top-3 結果。
-    """
-    w = agent.weights
-    analyzed = state.analyzed
-
-    sorted_res = sorted(
-        analyzed,
-        key=lambda x: (
-            x["match_score"] * w["match_score"]
-            + x["positive_rate"] * w["positive_rate"]
-            + (x["rating"] / 5.0) * w["rating"]
-        ),
-        reverse=True
-    )
-
-    # 儲存完整推薦結果
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    full_path = os.path.join(agent.output_dir, f"recommendation_{timestamp}.json")
-    save_json(sorted_res, full_path)
-
-    # 儲存簡短版本（給前端快速讀取）
-    latest = [
-        {
-            "name": r["name"],
-            "map_url": r["map_url"],
-            "rating": r["rating"],
-            "reason": r["reason"]
-        }
-        for r in sorted_res[:3]
-    ]
-    save_json(latest, os.path.join(agent.output_dir, "latest_recommendation.json"))
-
-    print("🏆 完成加權排序並輸出結果。")
-    return {"next": "response_node", "recommendations": sorted_res[:3]}
-
-
-# 🟪 6️⃣ Response Node — 輸出文字給前端
-def response_node(state):
-    """
-    根據分析結果組合回覆訊息，
-    用於回傳給前端或 LINE Bot。
-    """
-    prefs = state.preferences or []
-    recs = state.recommendations
-    print("📝 組合輸出文字中...")
-
-    msg = "🎯 根據你的偏好（" + "、".join(prefs) + "），推薦如下：\n\n"
-    medals = ["🥇", "🥈", "🥉"]
-    for i, r in enumerate(recs):
-        msg += f"{medals[i]} {r['name']} - ⭐{r['rating']}（{r['user_ratings_total']} 則評論）\n"
-        msg += f"📍 {r['map_url']}\n💬 推薦理由：{r['reason']}\n\n"
-
-    return {"next": END, "message": msg}
-
-
-# 🔁 Retry Node — 引導使用者重新輸入
-def retry_node(state):
-    msg = state.message or "請重新輸入地點與餐廳主題。"
-    print("🔁 請使用者補充輸入。")
-    return {"next": END, "message": msg}
+# ============ Graph State ============
 
 class RecommendState(BaseModel):
-    user_input: Optional[Dict[str, Any]] = None
+    user_input: Optional[str] = None
     location: Optional[str] = None
     category: Optional[str] = None
     preferences: Optional[List[str]] = None
@@ -255,79 +226,202 @@ class RecommendState(BaseModel):
     review_batches: Optional[List[Dict[str, Any]]] = None
     analyzed: Optional[List[Dict[str, Any]]] = None
     recommendations: Optional[List[Dict[str, Any]]] = None
-    message: Optional[str] = None
     next: Optional[str] = None
-# ────────────────────────────────
-# 🧩 Graph 組裝區
-# ────────────────────────────────
-def build_recommend_graph():
-    """
-    建立完整的餐廳推薦流程圖：
-    start → place_search → review_fetch → vector_analysis → ranking → response
-    若任一步失敗或資訊不足 → retry_node。
-    """
-    g = StateGraph(RecommendState)   # ← 🔥 必須傳入 state schema
+    message: Optional[str] = None
 
-    # === 節點定義 ===
-    g.add_node("start_node", start_node)
-    g.add_node("place_search_node", place_search_node)
-    g.add_node("review_fetch_node", review_fetch_node)
-    g.add_node("vector_analysis_node", vector_analysis_node)
-    g.add_node("ranking_node", ranking_node)
-    g.add_node("response_node", response_node)
-    g.add_node("retry_node", retry_node)
 
-    # === 節點連接 ===
-    g.add_edge(START, "start_node")
+# ============ Nodes ============
 
-    # ✅ 改成使用屬性取法
-    g.add_conditional_edges("start_node", lambda state: state.next)
-    g.add_conditional_edges("place_search_node", lambda state: state.next)
-    g.add_conditional_edges("review_fetch_node", lambda state: state.next)
-    g.add_conditional_edges("vector_analysis_node", lambda state: state.next)
-    g.add_conditional_edges("ranking_node", lambda state: state.next)
+def parse_user_input_node(state):
+    print("[parse_user_input_node] 原始輸入：", state.user_input)
+    data = parse_user_input(state.user_input)
+    print("[parse_user_input_node] 解析結果：", data)
 
-    g.add_edge("response_node", END)
-    g.add_edge("retry_node", END)
+    if not data:
+        return {"next": END, "message": "我不太懂，可以換句話嗎？"}
 
-    print("🧭 Recommend Graph 已建立完成。")
-    return g
-# ────────────────────────────────
-# 🚀 主程式執行（測試與整合）
-# ────────────────────────────────
-
-if __name__ == "__main__":
-    """
-    測試範例：
-    使用者輸入「台北市信義區」與「火鍋」，
-    偏好為「約會」與「安靜」。
-    可直接執行此檔案驗證整個流程。
-    """
-
-    graph = build_recommend_graph()
-    app = graph.compile()  # ✅ 新版 LangGraph 需先 compile
-
-    # 模擬使用者輸入
-    input_state = {
-        "user_input": {
-            "location": "台北市信義區",
-            "category": "火鍋"
-        },
-        "preferences": ["約會", "安靜"]
+    return {
+        "next": "place_search_node",
+        "location": data.get("location"),
+        "category": data.get("category"),
+        "preferences": data.get("preferences"),
     }
 
-    print("\n🚦 開始執行 Recommend Graph...\n")
 
-    # ✅ 改用 app.invoke() 或 app.stream()
-    result = app.invoke(input_state)
+def place_search_node(state):
+    print("[place_search_node] location =", state.location, "category =", state.category)
+    restaurants = search_restaurants(state.location, state.category)
+    print("[place_search_node] 搜尋到餐廳數量：", len(restaurants))
 
-    print("\n🧾 === 最終輸出結果 ===\n")
-    print(result["message"])
+    if not restaurants:
+        return {"next": END, "message": "這裡似乎沒有你想吃的餐廳"}
 
-    # 若需要，可額外讀取最新推薦結果
-    latest_path = "data/recommendations/latest_recommendation.json"
-    if os.path.exists(latest_path):
-        print("\n📂 最新推薦摘要已儲存於：", latest_path)
-    else:
-        print("\n⚠️ 未生成最新推薦摘要（流程可能中斷）。")
+    for r in restaurants[:3]:
+        print(
+            "  [place_search_node] 範例餐廳：",
+            r.get("name"),
+            "評分：", r.get("rating"),
+            "評論數：", r.get("user_ratings_total"),
+        )
 
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    try:
+        save_json.invoke({
+            "data": {
+                "location": state.location,
+                "category": state.category,
+                "timestamp": timestamp,
+                "restaurants": restaurants
+            },
+            "path": os.path.join(
+                agent.restaurant_list_dir,
+                f"{state.location}_{state.category}_{timestamp}.json"
+            ),
+        })
+        print("[place_search_node] 已儲存餐廳清單紀錄")
+    except Exception as e:
+        print("[place_search_node] 儲存餐廳清單失敗：", e)
+
+    return {"next": "review_fetch_node", "restaurants": restaurants}
+
+
+def review_fetch_node(state):
+    restaurants = state.restaurants or []
+    print("[review_fetch_node] 餐廳數量：", len(restaurants))
+
+    if not restaurants:
+        return {"next": END, "message": "找不到相關餐廳"}
+
+    results = agent.fetch_reviews_batch(restaurants)
+    print("[review_fetch_node] fetch_reviews_batch 結果數量：", len(results))
+
+    if not results:
+        analyzed = restaurants
+        print("[review_fetch_node] 沒有成功取得評論，改用原始餐廳清單作 ranking")
+        return {
+            "next": "ranking_node",
+            "analyzed": analyzed,
+            "message": "評論取得失敗，改用星等與人氣推薦"
+        }
+
+    return {
+        "next": "analysis_node",
+        "review_batches": results
+    }
+
+
+def analysis_node(state):
+    print("[analysis_node] review_batches 數量：", len(state.review_batches or []))
+    if not state.review_batches:
+        analyzed = state.analyzed or []
+        return {"next": "ranking_node", "analyzed": analyzed}
+
+    analyzed = agent.analyze_results(state.review_batches, state.preferences)
+    print("[analysis_node] 分析後餐廳數量：", len(analyzed or []))
+
+    if analyzed:
+        first = analyzed[0]
+        print(
+            "[analysis_node] 範例：",
+            first.get("name"),
+            "match_score =", first.get("match_score"),
+            "positive_rate =", first.get("positive_rate"),
+        )
+
+    return {"next": "ranking_node", "analyzed": analyzed}
+
+
+def ranking_node(state):
+    print("[ranking_node] 收到 analyzed 數量：", len(state.analyzed or []))
+
+    if not state.analyzed:
+        print("[ranking_node] analyzed 為空，無法排序")
+        return {"next": END, "message": "推薦餐廳不足，請換個方式提問"}
+
+    for r in state.analyzed:
+        r.setdefault("match_score", 0)
+        r.setdefault("positive_rate", 0)
+        r.setdefault("reason", "評論較少，以評分與人氣為主推薦")
+
+    w = agent.weights
+    print("[ranking_node] 權重設定：", w)
+
+    def score(x):
+        try:
+            return (
+                w["match_score"] * float(x.get("match_score", 0.0) or 0.0) +
+                w["positive_rate"] * float(x.get("positive_rate", 0.0) or 0.0) +
+                (float(x.get("rating", 0.0) or 0.0) / 5.0) * w["rating"]
+            )
+        except Exception as e:
+            print("[ranking_node] 計算分數時錯誤：", e)
+            return 0.0
+
+    ranked = sorted(
+        state.analyzed,
+        key=lambda x: score(x),
+        reverse=True
+    )
+
+    print("[ranking_node] 排名後前 3 間：")
+    for r in ranked[:3]:
+        print("   -", r.get("name"), "總分 =", score(r))
+
+    recommendations = ranked[:3]  # 先存起來
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    try:
+        save_json.invoke({
+            "data": {"timestamp": timestamp, "recommendations": ranked},
+            "path": os.path.join(agent.recommendations_dir, f"all_{timestamp}.json")
+        })
+        print("[ranking_node] 已儲存完整排名結果")
+    except Exception as e:
+        print("[ranking_node] 儲存排名結果失敗：", e)
+
+    # ★★★ 關鍵是把結果回傳出去，不要只改 state ★★★
+    return {"next": "response_node", "recommendations": recommendations}
+
+
+
+def response_node(state):
+    msg = "美食推薦結果：\n\n"
+    medals = ["第一名", "第二名", "第三名"]
+
+    recs = state.recommendations or []
+    if not recs:
+        print("[response_node] 沒有收到 recommendations")
+        return {"next": END, "message": "目前沒有可用的推薦結果，請換個條件再試一次。"}
+
+    msg = "美食推薦結果：\n\n"
+    medals = ["第一名", "第二名", "第三名"]
+
+    for i, r in enumerate(recs):
+        msg += f"{medals[i]}：{r['name']}  評分 {r['rating']}\n"
+        msg += f"地址：{r['address']}\n"
+        msg += f"地圖連結：{r['map_url']}\n"
+        msg += f"推薦理由：{r['reason']}\n\n"
+
+    return {"next": END, "message": msg}
+
+
+# ============ Graph Builder ============
+
+def build_recommend_graph():
+    g = StateGraph(RecommendState)
+    g.add_node("parse_user_input_node", parse_user_input_node)
+    g.add_node("place_search_node", place_search_node)
+    g.add_node("review_fetch_node", review_fetch_node)
+    g.add_node("analysis_node", analysis_node)
+    g.add_node("ranking_node", ranking_node)
+    g.add_node("response_node", response_node)
+
+    g.add_edge(START, "parse_user_input_node")
+    g.add_conditional_edges("parse_user_input_node", lambda s: s.next)
+    g.add_conditional_edges("place_search_node", lambda s: s.next)
+    g.add_conditional_edges("review_fetch_node", lambda s: s.next)
+    g.add_conditional_edges("analysis_node", lambda s: s.next)
+    g.add_conditional_edges("ranking_node", lambda s: s.next)
+    g.add_edge("response_node", END)
+    return g

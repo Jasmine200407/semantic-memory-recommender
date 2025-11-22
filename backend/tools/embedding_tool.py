@@ -11,8 +11,7 @@ from transformers import pipeline
 # ⚙️ 初始化模型
 # ────────────────────────────────
 embedder = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
-sentiment_analyzer = pipeline("sentiment-analysis")
-
+sentiment_analyzer = pipeline("sentiment-analysis", model="uer/roberta-base-finetuned-dianping-chinese")
 
 # ────────────────────────────────
 # 🧩 產生評論向量並儲存

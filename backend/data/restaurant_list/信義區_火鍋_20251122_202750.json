@@ -1,0 +1,207 @@
+{
+  "location": "信義區",
+  "category": "火鍋",
+  "timestamp": "20251122_202750",
+  "restaurants": [
+    {
+      "name": "三分半海鮮鍋物",
+      "place_id": "ChIJQfEpbRCrQjQRlmtmfIQ9kIk",
+      "rating": 4.8,
+      "user_ratings_total": 749,
+      "address": "110台灣臺北市信義區基隆路一段147巷5弄9號",
+      "map_url": "https://www.google.com/maps/place/?q=place_id:ChIJQfEpbRCrQjQRlmtmfIQ9kIk",
+      "phone": "02 2768 5553",
+      "website": "https://www.facebook.com/3.5seafoodpot",
+      "price_level": null,
+      "opening_hours": [
+        "星期一: 休息",
+        "星期二: 18:00 – 22:00",
+        "星期三: 12:00 – 15:00, 18:00 – 22:30",
+        "星期四: 12:00 – 15:00, 18:00 – 22:30",
+        "星期五: 12:00 – 15:00, 18:00 – 22:30",
+        "星期六: 12:00 – 15:00, 18:00 – 22:30",
+        "星期日: 12:00 – 15:00, 18:00 – 22:30"
+      ]
+    },
+    {
+      "name": "李蝦記爆蝦火鍋",
+      "place_id": "ChIJM93XIQCrQjQRclyo3ndRbYo",
+      "rating": 4.9,
+      "user_ratings_total": 563,
+      "address": "110台灣臺北市信義區松壽路12號5 樓",
+      "map_url": "https://www.google.com/maps/place/?q=place_id:ChIJM93XIQCrQjQRclyo3ndRbYo",
+      "phone": "02 7735 2337",
+      "website": "https://www.instagram.com/shrimpatlees",
+      "price_level": null,
+      "opening_hours": [
+        "星期一: 11:00 – 22:00",
+        "星期二: 11:00 – 22:00",
+        "星期三: 11:00 – 22:00",
+        "星期四: 11:00 – 22:00",
+        "星期五: 11:00 – 23:00",
+        "星期六: 11:00 – 23:00",
+        "星期日: 11:00 – 22:00"
+      ]
+    },
+    {
+      "name": "龍門陣四川火鍋八德店",
+      "place_id": "ChIJ0fraXQCrQjQRGxB9P01wI7k",
+      "rating": 4.9,
+      "user_ratings_total": 2221,
+      "address": "105台灣臺北市松山區八德路四段257號1 樓",
+      "map_url": "https://www.google.com/maps/place/?q=place_id:ChIJ0fraXQCrQjQRGxB9P01wI7k",
+      "phone": "02 2756 0063",
+      "website": null,
+      "price_level": null,
+      "opening_hours": [
+        "星期一: 17:00 – 00:00",
+        "星期二: 17:00 – 00:00",
+        "星期三: 17:00 – 00:00",
+        "星期四: 17:00 – 00:00",
+        "星期五: 17:00 – 00:00",
+        "星期六: 17:00 – 00:00",
+        "星期日: 17:00 – 00:00"
+      ]
+    },
+    {
+      "name": "鼎楓寶島火鍋 信義ATT店-信義推薦火鍋|特色鍋物|人氣鍋物|海鮮火鍋|平價火鍋|必吃火鍋|在地推薦火鍋|必吃火鍋",
+      "place_id": "ChIJ9xwg64KrQjQRW-tRk67LjRA",
+      "rating": 4.9,
+      "user_ratings_total": 1048,
+      "address": "110台灣臺北市信義區松壽路12號5 樓",
+      "map_url": "https://www.google.com/maps/place/?q=place_id:ChIJ9xwg64KrQjQRW-tRk67LjRA",
+      "phone": "02 2722 0686",
+      "website": "https://www.dingfengpot.com/",
+      "price_level": null,
+      "opening_hours": [
+        "星期一: 11:00 – 22:00",
+        "星期二: 11:00 – 22:00",
+        "星期三: 11:00 – 22:00",
+        "星期四: 11:00 – 22:00",
+        "星期五: 11:00 – 23:00",
+        "星期六: 11:00 – 23:00",
+        "星期日: 11:00 – 22:00"
+      ]
+    },
+    {
+      "name": "燒石鼎石頭小火鍋-信義店",
+      "place_id": "ChIJ4Z8DAwCrQjQReVzUJfxiiz8",
+      "rating": 4.9,
+      "user_ratings_total": 1093,
+      "address": "110台灣臺北市信義區松隆路22號",
+      "map_url": "https://www.google.com/maps/place/?q=place_id:ChIJ4Z8DAwCrQjQReVzUJfxiiz8",
+      "phone": "02 2765 6999",
+      "website": "https://sites.google.com/view/share-stone",
+      "price_level": null,
+      "opening_hours": [
+        "星期一: 11:00 – 00:00",
+        "星期二: 11:00 – 00:00",
+        "星期三: 11:00 – 00:00",
+        "星期四: 11:00 – 00:00",
+        "星期五: 11:00 – 00:00",
+        "星期六: 11:00 – 00:00",
+        "星期日: 11:00 – 22:00"
+      ]
+    },
+    {
+      "name": "牛郎溫體牛火鍋（台北松山區延吉街美食推薦／台北必吃溫體牛肉火鍋／松山宵夜聚餐餐廳）",
+      "place_id": "ChIJ-Qsxb36rQjQRsY9iTijmiwM",
+      "rating": 4.9,
+      "user_ratings_total": 128,
+      "address": "105台灣臺北市松山區延吉街30巷11號",
+      "map_url": "https://www.google.com/maps/place/?q=place_id:ChIJ-Qsxb36rQjQRsY9iTijmiwM",
+      "phone": "02 2578 8101",
+      "website": null,
+      "price_level": null,
+      "opening_hours": [
+        "星期一: 17:00 – 02:00",
+        "星期二: 17:00 – 02:00",
+        "星期三: 17:00 – 02:00",
+        "星期四: 17:00 – 02:00",
+        "星期五: 17:00 – 02:00",
+        "星期六: 17:00 – 02:00",
+        "星期日: 17:00 – 02:00"
+      ]
+    },
+    {
+      "name": "1+1鍋物—忠孝店",
+      "place_id": "ChIJVx650BKrQjQRc5yqJp8xicE",
+      "rating": 4.9,
+      "user_ratings_total": 3775,
+      "address": "106台灣臺北市大安區忠孝東路四段216巷32弄1號1樓",
+      "map_url": "https://www.google.com/maps/place/?q=place_id:ChIJVx650BKrQjQRc5yqJp8xicE",
+      "phone": "02 2711 2179",
+      "website": "https://www.facebook.com/1plus1.suabu",
+      "price_level": null,
+      "opening_hours": [
+        "星期一: 11:30 – 14:30, 17:00 – 22:30",
+        "星期二: 11:30 – 14:30, 17:00 – 22:30",
+        "星期三: 11:30 – 14:30, 17:00 – 22:30",
+        "星期四: 11:30 – 14:30, 17:00 – 22:30",
+        "星期五: 11:30 – 14:30, 17:00 – 22:30",
+        "星期六: 11:30 – 22:30",
+        "星期日: 11:30 – 22:30"
+      ]
+    },
+    {
+      "name": "養鍋 石頭涮涮鍋 台北松菸店（寵物友善餐廳）",
+      "place_id": "ChIJw9ikf7KrQjQRx3N166tVR6g",
+      "rating": 4.8,
+      "user_ratings_total": 4252,
+      "address": "110台灣臺北市信義區忠孝東路四段559巷28號",
+      "map_url": "https://www.google.com/maps/place/?q=place_id:ChIJw9ikf7KrQjQRx3N166tVR6g",
+      "phone": "02 2768 2889",
+      "website": "https://www.facebook.com/yangguo28",
+      "price_level": 2,
+      "opening_hours": [
+        "星期一: 11:30 – 14:30, 17:00 – 22:30",
+        "星期二: 11:30 – 14:30, 17:00 – 22:30",
+        "星期三: 11:30 – 14:30, 17:00 – 22:30",
+        "星期四: 11:30 – 14:30, 17:00 – 22:30",
+        "星期五: 11:30 – 14:30, 17:00 – 22:30",
+        "星期六: 11:00 – 22:30",
+        "星期日: 11:00 – 22:30"
+      ]
+    },
+    {
+      "name": "築鮮火鍋-肉品海鮮專賣店",
+      "place_id": "ChIJf_oRKFSrQjQRzWy2yVvOBvU",
+      "rating": 4.8,
+      "user_ratings_total": 433,
+      "address": "105台灣臺北市松山區民生東路四段123號1樓",
+      "map_url": "https://www.google.com/maps/place/?q=place_id:ChIJf_oRKFSrQjQRzWy2yVvOBvU",
+      "phone": "02 2547 3113",
+      "website": "https://www.facebook.com/HOTPOT.ZHUXIAN",
+      "price_level": null,
+      "opening_hours": [
+        "星期一: 休息",
+        "星期二: 11:30 – 21:30",
+        "星期三: 11:30 – 21:30",
+        "星期四: 11:30 – 21:30",
+        "星期五: 11:30 – 21:30",
+        "星期六: 11:30 – 21:30",
+        "星期日: 11:30 – 21:30"
+      ]
+    },
+    {
+      "name": "加分100%浜中特選昆布鍋物-八德店",
+      "place_id": "ChIJb3zhmpWrQjQRCfy4B9KhCy0",
+      "rating": 4.6,
+      "user_ratings_total": 1989,
+      "address": "105台灣臺北市松山區八德路四段170號",
+      "map_url": "https://www.google.com/maps/place/?q=place_id:ChIJb3zhmpWrQjQRCfy4B9KhCy0",
+      "phone": "02 2748 8885",
+      "website": "https://www.facebook.com/share/1EKRKv1jo1/?mibextid=wwXIfr",
+      "price_level": 2,
+      "opening_hours": [
+        "星期一: 12:00 – 14:30, 17:00 – 22:30",
+        "星期二: 12:00 – 14:30, 17:00 – 22:30",
+        "星期三: 12:00 – 14:30, 17:00 – 22:30",
+        "星期四: 12:00 – 14:30, 17:00 – 22:30",
+        "星期五: 12:00 – 14:30, 17:00 – 22:30",
+        "星期六: 11:30 – 22:30",
+        "星期日: 11:30 – 22:30"
+      ]
+    }
+  ]
+}
