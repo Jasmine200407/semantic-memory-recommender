@@ -1,143 +1,133 @@
-# 🍽️ AI 餐廳推薦系統（LangGraph + Gemini + Embedding）
+# Foodie Hunter Backend
 
-這是一個基於 LangGraph 節點架構的智能餐廳推薦系統，結合 Google Maps 評論擷取、SentenceTransformer 語意分析，以及 Gemini 模型生成個人化推薦理由，用於打造理解使用者口味與偏好的推薦體驗。
-
----
-
-## 🧩 系統模組架構
-
-```
-recommend_agent.py        # 主流程（LangGraph 節點式推薦代理）
-├── embedding_tool.py      # 向量分析與評論偏好相似度
-├── gemini_tool.py         # 使用 Gemini 生成推薦理由
-├── place_info_tool.py     # Google Places 餐廳搜尋與地點範圍檢查
-├── review_scraper_tool.py # Playwright 爬取 Google Maps 評論
-└── save_json.py           # 通用 JSON 儲存工具
-```
+Foodie Hunter Backend 提供餐廳智慧推薦 API，結合 Google Maps 餐廳資料、評論爬取、中文語意分析與大型語言模型推薦理由生成。本系統基於 LangGraph 建立推薦流程，使用者僅需輸入一句自然語言敘述，即可獲得完整美食推薦結果。
 
 ---
 
-## ⚙️ 安裝與設定
+## Features
 
-```bash
+* **自然語言需求解析**：使用 Gemini 模型解析文字需求，抽取地點、類型與偏好條件。
+* **Google Maps 餐廳資料查詢**：取得餐廳基本資訊與評價。
+* **Google Maps 中文評論爬取**：自動滾動載入、支援容錯 selector。
+* **中文情緒與語意分析**：模型分析評論情感傾向與偏好相關性。
+* **個人化推薦理由生成**：Gemini 自動產生推薦原因。
+* **資料快取與推薦結果儲存**：自動管理 JSON 快取避免重複爬取。
+* **完整推薦決策流程**：採用 LangGraph 建立具狀態的推薦 Agent。
+
+---
+
+## System Architecture
+
+```
++──────────────┐
+| User Query   |
++─────┬────────┘
+      ▼
+[1] Parse User Input (Gemini)
+      ▼
+[2] Search Restaurants (Google Places API)
+      ▼
+[3] Fetch Reviews (Playwright爬蟲)
+      ▼
+[4] NLP Semantic Analysis (BERT)
+      ▼
+[5] Score & Ranking
+      ▼
+[6] LLM-generated Recommendation Message
+      ▼
++──────────────┐
+| Recommendation Output |
++──────────────────────┘
+```
+
+---
+
+## Project Structure
+
+```
+backend/
+│
+├─ tools/
+│  ├─ embedding_tool.py      # 語意分析與情感分析
+│  ├─ gemini_tool.py         # LLM 理由生成
+│  ├─ place_info_tool.py     # Google 餐廳資訊
+│  ├─ review_scraper_tool.py # Playwright 評論爬蟲
+│  ├─ save_json.py           # JSON 輸出管理
+│
+├─ recommend_agent.py        # LangGraph 主流程建構
+├─ test_nlp.py               # 單次呼叫與輸出測試腳本
+└─ data/                     # 自動生成的快取與推薦結果
+```
+
+---
+
+## Environment Setup
+
+### 建立虛擬環境
+
+Windows PowerShell:
+
+```sh
+python -m venv venv
+venv\Scripts\Activate.ps1
+```
+
+macOS / Linux:
+
+```sh
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 安裝套件
+
+```sh
 pip install -r requirements.txt
 ```
 
-建立 `.env` 檔案：
+### 設定環境變數
 
-```env
-GOOGLE_PLACE_API_KEY=你的GoogleAPI金鑰
-GEMINI_API_KEY=你的GeminiAPI金鑰
-```
-
-初始化 Playwright（首次執行）：
-
-```bash
-playwright install chromium
-```
-
----
-
-## 🚀 執行方式
-
-```bash
-python recommend_agent.py
-```
-
-系統會自動執行：
-1. 驗證輸入地點與餐廳主題；
-2. 使用 Google Places API 搜尋餐廳；
-3. 並行擷取多家餐廳評論；
-4. 使用 SentenceTransformer 進行語意與情感分析；
-5. 由 Gemini 生成自然語言推薦理由；
-6. 最終輸出 Top 3 餐廳與推薦摘要。
-
----
-
-## 📁 輸出資料結構
+建立 `.env`：
 
 ```
-data/
-├── reviews/                ← 各餐廳評論 JSON
-├── vectors/                ← 各餐廳向量分析結果
-└── recommendations/
-    ├── recommendation_YYYYMMDD_HHMMSS.json
-    └── latest_recommendation.json
+GOOGLE_API_KEY=your_google_api_key
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+Playwright 初次安裝：
+
+```sh
+playwright install
 ```
 
 ---
 
-## 🧠 LangGraph 節點流程(施工中)
+## Run Example
 
-| 節點名稱 | 功能說明 |
-|-----------|-----------|
-| start_node | 驗證使用者輸入 |
-| place_search_node | 搜尋餐廳 |
-| review_fetch_node | 擷取多家評論（多執行緒） |
-| vector_analysis_node | 向量化與語意分析 |
-| ranking_node | 加權排序與結果輸出 |
-| response_node | 組合回覆訊息 |
-| retry_node | 補充輸入或處理錯誤時重試 |
+執行測試流程：
 
----
+```sh
+python test_nlp.py
+```
 
-## 📊 推薦加權公式
+範例輸入：
 
-```python
-final_score = (
-    match_score * 0.7 +
-    positive_rate * 0.2 +
-    (rating / 5.0) * 0.1
-)
+```
+我想在信義區找適合約會的火鍋
 ```
 
 ---
 
-## 🧾 範例輸出
+## Data Output
 
-```
-🎯 根據你的偏好（約會、安靜氣氛），推薦如下：
-
-🥇 手工殿麻辣鍋物 - ⭐4.6（385 則評論）
-📍 https://www.google.com/maps/place/?q=place_id:XXXX
-💬 推薦理由：這間火鍋店氣氛溫馨、座位寬敞，很適合情侶約會放鬆聊天。
-
-🥈 八海食堂 - ⭐4.5（212 則評論）
-📍 https://www.google.com/maps/place/?q=place_id:YYYY
-💬 推薦理由：食材新鮮、餐點精緻，是聚餐或家庭用餐的熱門選擇。
-```
+| 類別     | 路徑                    |
+| -------- | ----------------------- |
+| 餐廳清單 | `data/restaurant_list/` |
+| 評論快取 | `data/reviews/`         |
+| 推薦結果 | `data/recommendations/` |
 
 ---
 
-## 🧠 模組功能說明
+## License
 
-| 模組名稱 | 功能摘要 |
-|-----------|-----------|
-| embedding_tool.py | 轉換評論文字為語意向量，分析與使用者偏好的相似度。 |
-| gemini_tool.py | 使用 Google Gemini 生成自然語言推薦理由。 |
-| place_info_tool.py | 根據地點與關鍵字搜尋餐廳資訊並取得 Place ID。 |
-| review_scraper_tool.py | 使用 Playwright 自動滾動並爬取 Google Maps 評論。 |
-| save_json.py | 儲存 JSON 資料（支援 LangGraph 節點整合）。 |
-| recommend_agent.py | 主控制模組，整合所有工具形成完整推薦流程。 |
-
----
-
-## 🧰 相依套件（requirements.txt）
-
-```txt
-langchain>=0.3.0
-langgraph>=0.2.0
-pydantic>=2.8.0
-python-dotenv>=1.0.0
-torch>=2.0.0
-sentence-transformers>=2.2.2
-transformers>=4.40.0
-numpy>=1.25.0
-requests>=2.31.0
-playwright>=1.43.0
-google-generativeai>=0.5.4
-concurrent-log-handler>=0.9.24
-tqdm>=4.66.0
-ipython
-rich
-```
+本專案採用 MIT License 授權。
