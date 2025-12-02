@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>Foodie Hunter</title>
+  <style>
+    /* ========== 全域 ========== */
+    * ,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ========== 奶油色背景 ========== */
+    body {
+      background: linear-gradient(135deg, #fffaf4, #f3ede4);
+      font-family: "Open Sans", "Noto Sans TC", sans-serif;
+      font-size: 12px;
+      line-height: 1.3;
+      overflow: hidden;
+    }
+
+    /* ========== 主聊天容器 ========== */
+    .chat {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 80vh;
+      max-height: 500px;
+      z-index: 2;
+      overflow: hidden;
+
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(18px);
+      border-radius: 20px;
+      box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(255, 255, 255, 0.4);
+
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* ========== 標題列 ========== */
+    .chat-title {
+      flex: 0 1 45px;
+      position: relative;
+      background: rgba(255, 255, 255, 0.7);
+      color: #444;
+      text-transform: uppercase;
+      text-align: left;
+      padding: 10px 10px 10px 50px;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .chat-title h1, .chat-title h2 {
+      font-weight: normal;
+      margin: 0;
+      padding: 0;
+    }
+    .chat-title h1 {
+      font-size: 11px;
+      font-weight: 700;
+      color: #333;
+    }
+    .chat-title h2 {
+      color: #777;
+      font-size: 9px;
+      letter-spacing: 1px;
+    }
+    .chat-title .avatar {
+      position: absolute;
+      top: 8px;
+      left: 9px;
+      width: 30px;
+      height: 30px;
+      border-radius: 30px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.8);
+    }
+    .chat-title .avatar img {
+      width: 100%;
+      height: auto;
+    }
+
+    /* ========== 訊息區 ========== */
+    .messages {
+      flex: 1 1 auto;
+      position: relative;
+      width: 100%;
+      color: #333;
+      overflow: hidden;
+    }
+    .messages-content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 101%;
+      width: 100%;
+      padding: 10px 8px;
+      overflow-y: auto;
+    }
+
+    /* ========== 訊息泡泡（系統） ========== */
+    .message {
+      clear: both;
+      float: left;
+      padding: 8px 12px;
+      border-radius: 14px 14px 14px 0;
+      background: rgba(255, 255, 255, 0.9);
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-left: 35px;
+      position: relative;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .message::before {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 0;
+      border-top: 6px solid rgba(255, 255, 255, 0.9);
+      border-right: 7px solid transparent;
+    }
+    .message .timestamp {
+      position: absolute;
+      bottom: -15px;
+      font-size: 9px;
+      color: rgba(0,0,0,0.3);
+    }
+
+    /* ========== 訊息泡泡（使用者） ========== */
+    .message-personal {
+      float: right;
+      margin-right: 10px;
+      margin-left: 0;
+      text-align: right;
+      background: #4c89ff;
+      color: #fff;
+      border-radius: 14px 14px 0 14px;
+    }
+    .message-personal::before {
+      left: auto;
+      right: 0;
+      border-right: none;
+      border-left: 5px solid transparent;
+      border-top: 6px solid #4c89ff;
+    }
+
+    /* ========== 輸入區 ========== */
+    .message-box {
+      flex: 0 1 40px;
+      width: 100%;
+      background: rgba(255,255,255,0.75);
+      padding: 10px;
+      position: relative;
+      border-top: 1px solid rgba(0,0,0,0.05);
+    }
+    .message-input {
+      background: none;
+      border: none;
+      outline: none;
+      resize: none;
+      color: #555;
+      font-size: 12px;
+      height: 17px;
+      margin: 0;
+      padding-right: 60px;
+      width: 100%;
+      font-family: inherit;
+    }
+    .message-submit {
+      position: absolute;
+      top: 9px;
+      right: 10px;
+      color: #fff;
+      border: none;
+      background: #4c89ff;
+      font-size: 10px;
+      text-transform: uppercase;
+      line-height: 1;
+      padding: 6px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .message-submit:hover {
+      background: #3c6fdd;
+    }
+
+    /* ========== loading dots ========== */
+    .message.loading {
+      color: transparent;
+    }
+    .message.loading::before,
+    .message.loading span,
+    .message.loading span::before,
+    .message.loading span::after {
+      background: rgba(170,170,170,0.7);
+      border-radius: 50%;
+      width: 4px;
+      height: 4px;
+    }
+    .message.loading span {
+      display: block;
+      position: relative;
+      width: 24px;
+      height: 10px;
+      font-size: 0;
+    }
+    .message.loading span::before,
+    .message.loading span::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .message.loading span::before {
+      left: 0;
+    }
+    .message.loading span::after {
+      right: 0;
+    }
+
+    /* ========== 餐廳推薦泡泡 ========== */
+    .restaurant-bubble {
+      clear: both;
+      float: left;
+      margin-left: 35px;
+      margin-top: 6px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      font-size: 13px;
+      color: #333;
+    }
+    .restaurant-bubble .name {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .restaurant-bubble .tags {
+      font-size: 11px;
+      color: #777;
+      margin-bottom: 6px;
+    }
+    .restaurant-bubble .reason {
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .restaurant-bubble .price {
+      font-size: 11px;
+      color: #777;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="chat">
+    <!-- 標題列 -->
+    <div class="chat-title">
+      <div class="avatar">
+        <!-- 可以之後換成你自己畫的圖 -->
+        <img src="https://i.imgur.com/0y8Ftya.png" alt="avatar" />
+      </div>
+      <h1>Foodie Hunter</h1>
+      <h2>你的都市找餐小幫手</h2>
+    </div>
+
+    <!-- 訊息區 -->
+    <div class="messages">
+      <div class="messages-content" id="messages"></div>
+    </div>
+
+    <!-- 輸入區 -->
+    <div class="message-box">
+      <textarea
+        class="message-input"
+        id="messageInput"
+        placeholder="輸入你的找餐需求…"
+      ></textarea>
+      <button class="message-submit" id="sendButton">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const messagesEl = document.getElementById("messages");
+    const inputEl = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendButton");
+
+    function scrollToBottom() {
+      const parent = messagesEl.parentNode;
+      parent.scrollTop = parent.scrollHeight;
+    }
+
+    function addMessage(text, isPersonal = false) {
+      const div = document.createElement("div");
+      div.className = "message" + (isPersonal ? " message-personal" : "");
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      scrollToBottom();
+      return div;
+    }
+
+    function addLoading() {
+      const div = document.createElement("div");
+      div.className = "message loading";
+      div.innerHTML = "<span></span>";
+      messagesEl.appendChild(div);
+      scrollToBottom();
+      return div;
+    }
+
+    function addRestaurantBubble(item) {
+      const div = document.createElement("div");
+      div.className = "restaurant-bubble";
+      div.innerHTML = `
+        <div class="name">${item.name}</div>
+        <div class="tags">${(item.tags || []).join(" / ")}</div>
+        <div class="reason">${item.reason}</div>
+        <div class="price">預估價位：約 ${item.avg_price || "—"} 元/人</div>
+      `;
+      messagesEl.appendChild(div);
+      scrollToBottom();
+    }
+
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      // 使用者訊息
+      addMessage(text, true);
+      inputEl.value = "";
+
+      // loading
+      const loading = addLoading();
+
+      // 🔧 這裡先用假資料，確定前端 UI 沒問題
+      setTimeout(() => {
+        loading.remove();
+        addMessage("以下是我為你找到的餐廳（目前是假資料 Demo）：");
+
+        const mock = [
+          {
+            name: "湯之森火鍋屋",
+            tags: ["火鍋", "約會", "下雨天"],
+            reason: "湯底溫和、氣氛安靜，很適合雨天慢慢聊天。",
+            avg_price: 320
+          },
+          {
+            name: "小川食堂",
+            tags: ["午餐", "上班族", "出餐快"],
+            reason: "步行約 5 分鐘即可抵達，出餐快速，適合午休時間有限時使用。",
+            avg_price: 200
+          }
+        ];
+
+        mock.forEach(addRestaurantBubble);
+      }, 800);
+
+      /* 
+      ✅ 之後要接你們的後端時，把上面 setTimeout 拿掉
+         改成呼叫 API：
+
+      try {
+        const res = await fetch("http://127.0.0.1:8000/search", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ query: text, top_k: 3 })
+        });
+        const data = await res.json();
+        loading.remove();
+
+        if (!data.restaurants || data.restaurants.length === 0) {
+          addMessage("目前找不到符合的餐廳 QQ");
+          return;
+        }
+
+        addMessage("以下是我為你找到的選項：");
+        data.restaurants.forEach(addRestaurantBubble);
+
+      } catch (err) {
+        loading.remove();
+        addMessage("伺服器錯誤，請稍後再試～");
+      }
+      */
+    }
+
+    sendBtn.addEventListener("click", sendMessage);
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // 一進頁面先給一則歡迎訊息
+    addMessage("嗨～我是 Foodie Hunter，有什麼想吃的嗎？");
+  </script>
+</body>
+</html>
