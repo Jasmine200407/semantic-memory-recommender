@@ -12,48 +12,57 @@ body {
 }
 
 body {
-    background: linear-gradient(135deg, #fffaf4, #f3ede4);
+    background: #000; /* 全黑 */
     font-family: "Open Sans", "Noto Sans TC", sans-serif;
     overflow: hidden;
 }
 
 /* CHAT BOX */
 .chat {
-    width: 500px;
-    height: 90vh;
-    max-height: 560px;
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-    display: flex;
-    flex-direction: column;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  width: 430px;            /* 聊天視窗寬度 */
+  height: 80vh;            /* 高度 */
+  
+  background: rgba(40, 40, 40, 0.8);
+  backdrop-filter: blur(20px);
+  
+  border-radius: 24px;      /* 漂亮圓角 */
+  overflow: hidden;         /* 讓白色輸入框圓角不要溢出 */
+  
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 0 25px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 /* TITLE */
 .chat-title {
-    flex: 0 1 45px;
-    background: rgba(255, 255, 255, 0.6);
-    padding: 10px 10px 10px 50px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex: 0 1 52px;
+  position: relative;
+  background: #222; /* 深灰 */
+  color: #f3f3f3;
+  text-transform: none;
+  padding: 10px 12px 10px 52px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 .chat-title h1 {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 700;
-    color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff; /* 主標純白 */
 }
 
 .chat-title h2 {
-    margin: 0;
-    font-size: 10px;
-    color: #777;
+  font-size: 10px;
+  color: #ccc; /* 副標亮灰 */
+  letter-spacing: 0.5px;
 }
+
 
 .chat-title .avatar {
     position: absolute;
@@ -80,7 +89,8 @@ body {
 }
 
 .message {
-    background: rgba(255, 255, 255, 0.85);
+   background: rgba(60, 60, 60, 0.9);
+    color: #eee;
     padding: 8px 12px;
     border-radius: 14px 14px 14px 0;
     margin: 8px 0 8px 35px;
@@ -150,37 +160,99 @@ body {
 }
 
 /* INPUT BOX */
+/* 輸入欄（白色區） */
+/* ---- 底部白色輸入欄 ---- */
 .message-box {
-    flex: 0 1 40px;
-    background: rgba(255, 255, 255, 0.65);
-    padding: 10px;
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
-    position: relative;
+  background: #ffffff;
+  padding: 12px;
+  
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  
+  border-top: 1px solid rgba(0,0,0,0.1);
 }
 
+/* 輸入框 */
 .message-input {
-    border: none;
-    background: transparent;
-    width: 260px;
-    font-size: 13px;
-    outline: none;
-    resize: none;
+  flex: 1;
+  background: #ffffff;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #333;
+  padding: 8px;
+  border-radius: 8px;
 }
 
-.message-submit {
-    position: absolute;
-    top: 9px;
-    right: 12px;
-    background: #4c89ff;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 10px;
-    font-size: 11px;
-    cursor: pointer;
+.message-input::placeholder {
+  color: #999;
 }
+
+/* Send 按鈕 */
+.message-submit {
+  background: #4c89ff;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+
+
+.message-submit:hover {
+  background: #3d6ed1;
+}
+
+
 
 .message-submit:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+.chat {
+  position: relative;
+  background: rgba(40, 40, 40, 0.75); /* 深灰半透明 */
+  backdrop-filter: blur(18px);
+  border-radius: 20px;
+  box-shadow:
+    0 0 25px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+
+.chat::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+background-image: url("logo 去背.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 60%; /* 浮水印大小 */
+  opacity: 1; /* 浮水印透明度 */
+  pointer-events: none; /* 不影響點擊 */
+  z-index: 0;
+}
+
+.chat-title .avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 填滿圓形、裁掉多餘 */
+  display: block;
+}
+
+/* 讓浮水印永遠在最底層 */
+.chat::before {
+  z-index: 0 !important;
+}
+
+/* 讓所有可互動的區域蓋在最上層 */
+.chat-title,
+.messages,
+.message-box {
+  position: relative;
+  z-index: 2;
 }
