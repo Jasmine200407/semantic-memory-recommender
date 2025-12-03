@@ -1,112 +1,126 @@
 const messagesEl = document.getElementById("messages");
-const inputEl = document.getElementById("messageInput");
+const recommendationArea = document.getElementById("recommendationArea");
+const inputEl = document.getElementById("messageInput");   // ← 修正完成！
 const sendBtn = document.getElementById("sendButton");
 
+let isThinking = false;
+
+// scroll to bottom
 function scrollToBottom() {
-  const parent = messagesEl.parentNode;
-  parent.scrollTop = parent.scrollHeight;
+    const parent = messagesEl.parentNode;
+    parent.scrollTop = parent.scrollHeight;
 }
 
+// chat bubble
 function addMessage(text, isPersonal = false) {
-  const div = document.createElement("div");
-  div.className = "message" + (isPersonal ? " message-personal" : "");
-  div.textContent = text;
-  messagesEl.appendChild(div);
-  scrollToBottom();
-  return div;
+    const div = document.createElement("div");
+    div.className = "message" + (isPersonal ? " message-personal" : "");
+    div.textContent = text;
+    messagesEl.appendChild(div);
+    scrollToBottom();
+    return div;
 }
 
+// loading bubble
 function addLoading() {
-  const div = document.createElement("div");
-  div.className = "message loading";
-  div.innerHTML = "<span></span>";
-  messagesEl.appendChild(div);
-  scrollToBottom();
-  return div;
+    const div = document.createElement("div");
+    div.className = "message loading";
+    div.innerHTML = "<span></span>";
+    messagesEl.appendChild(div);
+    scrollToBottom();
+    return div;
 }
 
-function addRestaurantBubble(item) {
-  const div = document.createElement("div");
-  div.className = "restaurant-bubble";
-  div.innerHTML = `
-    <div class="name">${item.name}</div>
-    <div class="tags">${(item.tags || []).join(" / ")}</div>
-    <div class="reason">${item.reason}</div>
-    <div class="price">預估價位：約 ${item.avg_price || "—"} 元/人</div>
-  `;
-  messagesEl.appendChild(div);
-  scrollToBottom();
+// restaurant card (in bottom area)
+function addRestaurantCard(item, rank) {
+    const card = document.createElement("div");
+    card.className = "restaurant-card";
+
+    card.innerHTML = `
+        <div class="title">#${rank} ${item.name}</div>
+        <div class="rating">
+          ⭐ ${item.rating ?? "—"} · 好感度 ${Math.round((item.match_score || 0) * 100)}%
+        </div>
+        <div class="reason">${item.reason || "很適合你！"}</div>
+        <div class="tags">
+          ${(item.preferences || []).map(p => `<span>#${p}</span>`).join(" ")}
+        </div>
+    `;
+
+    recommendationArea.appendChild(card);
 }
 
-async function sendMessage() {
-  const text = inputEl.value.trim();
-  if (!text) return;
+// clear previous recommendations
+function clearRecommendations() {
+    recommendationArea.innerHTML = "";
+}
 
-  // 使用者訊息
-  addMessage(text, true);
-  inputEl.value = "";
+// send message
+function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text) return;
 
-  // loading
-  const loading = addLoading();
-
-  // 🔧 這裡先用假資料，確定前端 UI 沒問題
-  setTimeout(() => {
-    loading.remove();
-    addMessage("以下是我為你找到的餐廳（目前是假資料 Demo）：");
-
-    const mock = [
-      {
-        name: "湯之森火鍋屋",
-        tags: ["火鍋", "約會", "下雨天"],
-        reason: "湯底溫和、氣氛安靜，很適合雨天慢慢聊天。",
-        avg_price: 320
-      },
-      {
-        name: "小川食堂",
-        tags: ["午餐", "上班族", "出餐快"],
-        reason: "步行約 5 分鐘即可抵達，出餐快速，適合午休時間有限時使用。",
-        avg_price: 200
-      }
-    ];
-
-    mock.forEach(addRestaurantBubble);
-  }, 800);
-
-  /* 
-  ✅ 之後要接你們的後端時，把上面 setTimeout 拿掉
-     改成呼叫 API：
-
-  try {
-    const res = await fetch("http://127.0.0.1:8000/search", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ query: text, top_k: 3 })
-    });
-    const data = await res.json();
-    loading.remove();
-
-    if (!data.restaurants || data.restaurants.length === 0) {
-      addMessage("目前找不到符合的餐廳 QQ");
-      return;
+    if (isThinking) {
+        addMessage("我還在處理上一個請求，等等喔～");
+        return;
     }
 
-    addMessage("以下是我為你找到的選項：");
-    data.restaurants.forEach(addRestaurantBubble);
+    addMessage(text, true);
+    inputEl.value = "";
 
-  } catch (err) {
-    loading.remove();
-    addMessage("伺服器錯誤，請稍後再試～");
-  }
-  */
+    isThinking = true;
+    inputEl.disabled = true;
+    sendBtn.disabled = true;
+
+    let loading = addLoading();
+    loading.textContent = "正在處理中…";
+
+    clearRecommendations();
+
+    const eventSource = new EventSource(
+        `http://127.0.0.1:8000/chat_stream?user_input=${encodeURIComponent(text)}`
+    );
+
+    eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.done) {
+            loading.remove();
+            addMessage("已完成推薦！✨");
+
+            (data.recommendation_json || []).forEach((item, index) => {
+                addRestaurantCard(item, index + 1);
+            });
+
+            isThinking = false;
+            inputEl.disabled = false;
+            sendBtn.disabled = false;
+
+            eventSource.close();
+            return;
+        }
+
+        loading.textContent = data.status;
+    };
+
+    eventSource.onerror = () => {
+        loading.remove();
+        addMessage("伺服器連線中斷，請稍後再試！");
+        isThinking = false;
+        inputEl.disabled = false;
+        sendBtn.disabled = false;
+        eventSource.close();
+    };
 }
 
 sendBtn.addEventListener("click", sendMessage);
+
 inputEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    sendMessage();
-  }
+    if (e.key === "Enter") {
+        e.preventDefault();
+        sendMessage();
+    }
 });
 
-// 一進頁面先給一則歡迎訊息
+// welcome
 addMessage("嗨～我是 Foodie Hunter，有什麼想吃的嗎？");
