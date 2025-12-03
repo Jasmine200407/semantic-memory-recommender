@@ -1,0 +1,186 @@
+/* RESET */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+}
+
+body {
+    background: linear-gradient(135deg, #fffaf4, #f3ede4);
+    font-family: "Open Sans", "Noto Sans TC", sans-serif;
+    overflow: hidden;
+}
+
+/* CHAT BOX */
+.chat {
+    width: 500px;
+    height: 90vh;
+    max-height: 560px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+}
+
+/* TITLE */
+.chat-title {
+    flex: 0 1 45px;
+    background: rgba(255, 255, 255, 0.6);
+    padding: 10px 10px 10px 50px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.chat-title h1 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: #333;
+}
+
+.chat-title h2 {
+    margin: 0;
+    font-size: 10px;
+    color: #777;
+}
+
+.chat-title .avatar {
+    position: absolute;
+    top: 8px;
+    left: 9px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+}
+
+/* MESSAGES */
+.messages {
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.messages-content {
+    position: absolute;
+    width: 100%;
+    height: 101%;
+    padding: 10px;
+}
+
+.message {
+    background: rgba(255, 255, 255, 0.85);
+    padding: 8px 12px;
+    border-radius: 14px 14px 14px 0;
+    margin: 8px 0 8px 35px;
+    float: left;
+    clear: both;
+    max-width: 70%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.message-personal {
+    background: #4c89ff;
+    color: #fff;
+    margin-left: 0;
+    margin-right: 10px;
+    float: right;
+    border-radius: 14px 14px 0 14px;
+}
+
+.message.loading {
+    opacity: 0.6;
+}
+
+/* RECOMMENDATION AREA */
+.recommendation-area {
+    width: 100%;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* RESTAURANT CARD */
+.restaurant-card {
+    background: #fff;
+    padding: 14px 16px;
+    border-radius: 16px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 12px;
+}
+
+.restaurant-card .title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.restaurant-card .rating {
+    color: #555;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.restaurant-card .reason {
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.restaurant-card .tags span {
+    font-size: 11px;
+    padding: 3px 6px;
+    background: #f2f4ff;
+    border-radius: 6px;
+    margin-right: 4px;
+    color: #4c57ff;
+}
+
+/* INPUT BOX */
+.message-box {
+    flex: 0 1 40px;
+    background: rgba(255, 255, 255, 0.65);
+    padding: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    position: relative;
+}
+
+.message-input {
+    border: none;
+    background: transparent;
+    width: 260px;
+    font-size: 13px;
+    outline: none;
+    resize: none;
+}
+
+.message-submit {
+    position: absolute;
+    top: 9px;
+    right: 12px;
+    background: #4c89ff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.message-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
