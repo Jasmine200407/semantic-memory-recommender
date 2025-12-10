@@ -23,10 +23,37 @@ def scrape_reviews_tw(place_id: str, max_reviews: int = 100, duration_limit: int
     reviews, seen = [], set()
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless)
-        page = browser.new_page()
+        # ================== ⭐ Headless Anti-detection ==================
+        browser = p.chromium.launch(
+            headless=headless,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
+                "--window-size=1280,800",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+            ]
+        )
 
-        # 加速封鎖圖片
+        context = browser.new_context(
+            locale="zh-TW",
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            viewport={"width": 1280, "height": 800},
+            java_script_enabled=True,
+        )
+
+        # ⭐ 最重要：讓 Google 無法偵測 headless
+        context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        """)
+
+        page = context.new_page()
+
+        # ⭐ 阻擋圖片（你原本的功能保留）
         page.route(
             "**/*",
             lambda route: route.abort()
@@ -34,20 +61,24 @@ def scrape_reviews_tw(place_id: str, max_reviews: int = 100, duration_limit: int
             else route.continue_(),
         )
 
+        # ================== ⭐ 開始流程 ==================
         page.goto(url, timeout=60000)
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(2000)
 
-        # 點擊查看全部評論
+        # 點擊「查看全部評論」按鈕
         try:
             btn = page.locator("button[aria-label*='評論'], button[aria-label*='review']").first
             btn.click()
             print("✅ 已點擊評論按鈕")
-            page.wait_for_timeout(3000)
+            page.wait_for_timeout(2000)
             page.wait_for_selector("div[data-review-id]", timeout=15000)
         except Exception as e:
             print(f"⚠️ 找不到評論按鈕或超時: {e}")
+            context.close()
             browser.close()
             return []
+
+        print(f"⚡ 正在滾動評論（最長 {duration_limit} 秒）...")
 
         scroll_script = """
         () => {
@@ -58,34 +89,37 @@ def scrape_reviews_tw(place_id: str, max_reviews: int = 100, duration_limit: int
         }
         """
 
-        print(f"⚡ 滾動評論中（最長 {duration_limit} 秒）...")
-        start = time.time()
-        while len(reviews) < max_reviews and (time.time() - start < duration_limit):
+        start_time = time.time()
+        while len(reviews) < max_reviews and (time.time() - start_time < duration_limit):
             page.evaluate(scroll_script)
-            page.wait_for_timeout(400)
+            page.wait_for_timeout(500)
 
+        # ⭐ 抓取評論
         elements = page.locator("div[data-review-id]")
+        print("🔍 正在解析評論...")
+
         for i in range(elements.count()):
             try:
                 el = elements.nth(i)
                 text = el.locator("span.wiI7pd, span[jsname='bN97Pc']").first.inner_text(timeout=500)
+
                 stars_raw = el.locator("span[aria-label*='星']").first.get_attribute("aria-label")
                 match = re.search(r'(\d(\.\d)?)', stars_raw or "")
                 stars = float(match.group(1)) if match else None
 
-                txt = text.strip()
-                if txt and txt not in seen:
-                    seen.add(txt)
-                    reviews.append({"text": txt, "stars": stars})
+                if text not in seen:
+                    seen.add(text)
+                    reviews.append({"text": text.strip(), "stars": stars})
+
                     if len(reviews) >= max_reviews:
                         break
             except:
                 continue
 
-        print(f"🎯 抓取完成，共 {len(reviews)} 則評論")
+        print(f"🎯 完成：共 {len(reviews)} 則評論")
+        context.close()
         browser.close()
         return reviews
-
 
 # ==================== 🔧 Tool ==================== #
 class ReviewScraperInput(BaseModel):

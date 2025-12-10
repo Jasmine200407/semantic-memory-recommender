@@ -1,0 +1,57 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'background': '#ffffff', 'primaryColor': '#E3F2FD', 'edgeLabelBackground': '#ffffff', 'fontSize': '18px', 'fontFamily': 'Noto Sans, Arial' }}}%%
+
+flowchart TB
+    %% =====================
+    %% 基礎建設層
+    %% =====================
+    subgraph L1[基礎建設層]
+        A1["Google Place API｜餐廳與評論資料來源"]
+        A2["Gemini API（2.5-flash）｜語意解析與生成"]
+        A3["Sentence-Transformers（MiniLM-L12-v2）｜語意向量比對"]
+        A4["資料儲存｜JSON 快取、MongoDB"]
+    end
+
+    %% =====================
+    %% 應用層
+    %% =====================
+    subgraph L2[後端]
+        B1["LangGraph 流程控制引擎（StateGraph）"]
+        B2["RecommendAgent 主體｜任務調度與狀態管理"]
+        B3["工具模組｜place_info、review_scraper、embedding、save_json"]
+        B4["自然語言解析模組｜parse_user_input_node → 結構化輸入"]
+        B5["向量分析與排序｜match_score、positive_rate、rating"]
+        B6["推薦理由生成模組｜Gemini API"]
+    end
+
+    %% =====================
+    %% 使用者層
+    %% =====================
+    subgraph L3[前端（Web Layer）]
+        C1["使用者介面｜Web／Dashboard"]
+        C2["輸入需求｜自然語言輸入"]
+        C3["輸出結果｜餐廳推薦、理由、地圖連結"]
+    end
+
+    %% =====================
+    %% 資料流
+    %% =====================
+    C2 --> B4
+    B4 --> B1
+    B1 --> A1
+    A1 --> B3
+    B3 --> B5
+    B5 --> B6
+    B6 --> B2
+    B2 --> C3
+    C3 --> C1
+
+    %% =====================
+    %% 樣式設定（簡報用扁平風格）
+    %% =====================
+    classDef infra fill:#F3F6FC,stroke:#1E40AF,stroke-width:1.5px,font-size:18px,color:#111,font-weight:bold;
+    classDef app fill:#FFF8E6,stroke:#B45309,stroke-width:1.5px,font-size:18px,color:#111,font-weight:bold;
+    classDef user fill:#FAEAEA,stroke:#B91C1C,stroke-width:1.5px,font-size:18px,color:#111,font-weight:bold;
+
+    class L1 infra;
+    class L2 app;
+    class L3 user;

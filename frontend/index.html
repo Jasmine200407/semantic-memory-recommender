@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foodie Hunter - 餐廳推薦助手</title>
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="app">
+        <span class="glow"></span>
+
+        <!-- 左側：聊天區 -->
+        <div class="chat-left">
+
+            <div class="chat-title">
+                <div class="avatar">
+                    <img src="static/logo.jpg" alt="Foodie Hunter" />
+                </div>
+                <div class="title-text">
+                    <h1>🍔 Foodie Hunter</h1>
+                    <h2>你的都市找餐小幫手</h2>
+                </div>
+            </div>
+
+            <div class="messages">
+                <div class="messages-content" id="messages">
+                    <!-- 訊息將透過 JavaScript 動態添加 -->
+                </div>
+            </div>
+
+            <div class="message-box">
+                <textarea class="message-input" id="messageInput" placeholder="例如：信義區火鍋、東區燒肉..." rows="1"></textarea>
+                <button class="message-submit" id="sendButton">
+                    <span>send</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- 右側：推薦卡片 -->
+        <div class="chat-right">
+            <div class="recommendation-header">
+                <h1> 推薦結果</h1>
+            </div>
+            <div class="recommendation-area" id="recommendationArea">
+                <!-- 推薦結果將顯示在這裡 -->
+            </div>
+        </div>
+
+    </div>
+
+    <script src="static/script.js"></script>
+</body>
+
+</html>

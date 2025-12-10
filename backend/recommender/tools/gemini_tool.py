@@ -33,7 +33,7 @@ def generate_reason(name, summary, preferences=None, match_score=None):
 - 匹配分數（0~1）：{match_score if match_score is not None else '未知'}
 - 評論摘要：{summary}
 
-請生成 2~3 句自然流暢的繁體中文理由，語氣親切、自然，
+請依據嚴格評論摘要生成 2~3 句自然流暢的繁體中文理由，語氣親切、自然，
 要明確說出這家餐廳為何符合使用者的偏好（如氣氛、口味、CP值等）。
 回覆格式請只輸出純文字，不要包含 JSON、標題或代碼。
     """

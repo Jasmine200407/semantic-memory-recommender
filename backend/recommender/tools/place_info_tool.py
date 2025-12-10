@@ -43,11 +43,11 @@ def location_is_too_large(location: str) -> bool:
 
     try:
         url = f"https://maps.googleapis.com/maps/api/geocode/json?address={location}&key={api_key}"
-        resp = requests.get(url, timeout=10)
+        resp = requests.get(url, timeout=10)  # 🕒 加入 timeout
         data = resp.json()
 
         if data.get("status") != "OK" or not data.get("results"):
-            print(f"⚠️ 無法解析地點：{location}")
+            print(f"⚠️ 無法解析地點：{location}（status={data.get('status')}）")  # 📝 加上 log
             return True
 
         geometry = data["results"][0].get("geometry", {})
@@ -63,7 +63,7 @@ def location_is_too_large(location: str) -> bool:
         return False
 
     except requests.exceptions.ReadTimeout:
-        print("⏰ Google API 連線逾時，略過範圍檢查。")
+        print("⏰ Google API 連線逾時，略過範圍檢查。")  # 📝 timeout log
         return False
 
     except Exception as e:
@@ -74,53 +74,6 @@ def location_is_too_large(location: str) -> bool:
 # ────────────────────────────────
 # 🍽️ 搜尋餐廳
 # ────────────────────────────────
-# def search_restaurants(location: str, category: str, radius: int = 2000, max_results: int = 10):
-#     """
-#     使用 Google Places Text Search API 搜尋餐廳資訊。
-
-#     Args:
-#         location (str): 使用者指定的地點（例如「信義區」）
-#         category (str): 餐廳主題（例如「火鍋」、「早午餐」）
-#         radius (int): 搜尋範圍（公尺）
-#         max_results (int): 取回的最大餐廳數量
-
-#     Returns:
-#         list[dict]: 餐廳資訊列表，每筆包含名稱、ID、評分、地址與地圖連結。
-#     """
-#     query = f"{location} {category} 餐廳"
-#     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
-#     params = {
-#         "query": query,
-#         "type": "restaurant",
-#         "language": "zh-TW",
-#         "key": GOOGLE_API_KEY,
-#     }
-
-#     try:
-#         response = requests.get(url, params=params)
-#         data = response.json()
-#         status = data.get("status")
-
-#         if status != "OK":
-#             print(f"⚠️ Google Places API 錯誤：{status}")
-#             return []
-
-#         restaurants = []
-#         for item in data.get("results", [])[:max_results]:
-#             restaurants.append({
-#                 "name": item.get("name"),
-#                 "place_id": item.get("place_id"),
-#                 "rating": item.get("rating", 0),
-#                 "user_ratings_total": item.get("user_ratings_total", 0),
-#                 "address": item.get("formatted_address", ""),
-#                 "map_url": f"https://www.google.com/maps/place/?q=place_id:{item.get('place_id')}",
-#             })
-
-#         return restaurants
-
-#     except Exception as e:
-#         print(f"❌ 餐廳搜尋失敗：{e}")
-#         return []
 import requests
 def search_restaurants(location: str, category: str, radius: int = 2000, max_results: int = 10):
     geocode_url = "https://maps.googleapis.com/maps/api/geocode/json"
@@ -129,9 +82,17 @@ def search_restaurants(location: str, category: str, radius: int = 2000, max_res
         "key": GOOGLE_API_KEY,
         "language": "zh-TW"
     }
-    geo_res = requests.get(geocode_url, params=geo_params).json()
+    try:
+        geo_res = requests.get(geocode_url, params=geo_params, timeout=10).json()  # 🕒 timeout
+    except requests.exceptions.ReadTimeout:
+        print(f"⏰ 地理編碼逾時：{location}")  # 📝 timeout log
+        return []
+    except Exception as e:
+        print(f"❌ 地理編碼失敗：{e}")
+        return []
+
     if geo_res.get("status") != "OK":
-        print(f"⚠️ 地理編碼失敗：{geo_res.get('status')}")
+        print(f"⚠️ 地理編碼失敗：{geo_res.get('status')}")  # 📝 status log
         return []
 
     lat = geo_res["results"][0]["geometry"]["location"]["lat"]
@@ -146,9 +107,22 @@ def search_restaurants(location: str, category: str, radius: int = 2000, max_res
         "key": GOOGLE_API_KEY,
         "language": "zh-TW"
     }
-    res = requests.get(nearby_url, params=nearby_params).json()
-    if res.get("status") != "OK":
-        print(f"⚠️ 搜尋失敗：{res.get('status')}")
+
+    try:
+        res = requests.get(nearby_url, params=nearby_params, timeout=10).json()  # 🕒 timeout
+    except requests.exceptions.ReadTimeout:
+        print(f"⏰ 餐廳搜尋逾時：{location} {category}")
+        return []
+    except Exception as e:
+        print(f"❌ 餐廳搜尋錯誤：{e}")
+        return []
+
+    status = res.get("status")
+    if status == "OVER_QUERY_LIMIT":
+        print("🚫 API 超出額度，請檢查計費或配額！")  # 📝 log
+        return []
+    if status != "OK":
+        print(f"⚠️ 餐廳搜尋失敗：{status}")  # 📝 log
         return []
 
     restaurants = []
@@ -165,20 +139,32 @@ def search_restaurants(location: str, category: str, radius: int = 2000, max_res
             "language": "zh-TW",
             "key": GOOGLE_API_KEY
         }
-        details_res = requests.get(details_url, params=details_params).json()
-        d = details_res.get("result", {}) if details_res.get("status") == "OK" else {}
+        try:
+            details_res = requests.get(details_url, params=details_params, timeout=10).json()  # 🕒 timeout
+        except requests.exceptions.ReadTimeout:
+            print(f"⏰ Details 逾時：{place_id}")
+            d = {}
+        except Exception as e:
+            print(f"❌ Details 查詢錯誤：{e}")
+            d = {}
+
+        if details_res.get("status") != "OK":
+            print(f"⚠️ Details 回傳非 OK：{details_res.get('status')}")  # 📝 log
+            d = details_res.get("result", {})
+        else:
+            d = details_res.get("result", {})
 
         restaurants.append({
             "name": item.get("name"),
             "place_id": place_id,
             "rating": item.get("rating", 0),
             "user_ratings_total": item.get("user_ratings_total", 0),
-            "address": d.get("formatted_address", item.get("vicinity", "")),  # ← 完整地址
+            "address": d.get("formatted_address", item.get("vicinity", "")),
             "map_url": f"https://www.google.com/maps/place/?q=place_id:{place_id}",
             "phone": d.get("formatted_phone_number"),
             "website": d.get("website"),
             "price_level": d.get("price_level"),
-            "opening_hours": d.get("opening_hours", {}).get("weekday_text")
+            "opening_hours": d.get("opening_hours", {}).get("weekday_text") if d.get("opening_hours") else None
         })
 
     return restaurants

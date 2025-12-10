@@ -1,0 +1,535 @@
+/* ===========================
+   CSS 變數設定
+=========================== */
+:root {
+    /* 發光效果變數 */
+    --glow-sens: 25;
+    --color-sens: 45;
+    --pointer-x: 50%;
+    --pointer-y: 50%;
+    --pointer-deg: 45deg;
+    --pointer-d: 0;
+
+    /* 顏色變數 */
+    --primary-gradient: linear-gradient(135deg, #D1D3D4 0%, #D1D3D4 100%);
+    --glow-color: 0deg 0% 85%;
+    /* 銀白光 */
+    --card-bg: rgba(30, 30, 40, 0.95);
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0c0;
+}
+
+/* ===========================
+   基礎樣式
+=========================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: "Noto Sans TC", sans-serif;
+    background: #ffffff;
+    /* 原本紫藍漸層 → 改白 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
+@keyframes gradientShift {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* ===========================
+   主容器 - 發光卡片效果
+=========================== */
+.app {
+    position: relative;
+    width: 92vw;
+    max-width: 1400px;
+    height: 88vh;
+    max-height: 900px;
+    border-radius: 28px;
+    display: flex;
+    overflow: hidden;
+    isolation: isolate;
+
+    /* 基礎背景 */
+    background: linear-gradient(135deg,
+            rgba(40, 40, 50, 0.95) 0%,
+            rgba(30, 30, 40, 0.98) 100%);
+
+    /* 多層陰影 */
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        0 4px 8px rgba(0, 0, 0, 0.1),
+        0 8px 16px rgba(0, 0, 0, 0.15),
+        0 16px 32px rgba(0, 0, 0, 0.2),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 彩色發光邊框效果 */
+.app::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid transparent;
+    background:
+        linear-gradient(var(--card-bg) 0 100%) padding-box,
+        radial-gradient(at 70% 50%, hsla(0, 0%, 85%, 1) 0px, transparent 50%) border-box,
+        radial-gradient(at 30% 80%, hsla(0, 0%, 85%, 1) 0px, transparent 50%) border-box,
+        radial-gradient(at 85% 20%, hsla(0, 0%, 85%, 1) 0px, transparent 50%) border-box,
+        radial-gradient(at 15% 35%, hsla(0, 0%, 85%, 1) 0px, transparent 50%) border-box,
+        linear-gradient(#D1D3D4 0 100%) border-box;
+
+    opacity: calc((var(--pointer-d) - var(--color-sens)) / (100 - var(--color-sens)));
+    mask-image: conic-gradient(from var(--pointer-deg) at center,
+            black 20%, transparent 40%, transparent 60%, black 80%);
+    pointer-events: none;
+    z-index: -1;
+    transition: opacity 0.3s ease;
+}
+
+/* 發光層 */
+.glow {
+    position: absolute;
+    inset: -30px;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+
+    mask-image: conic-gradient(from var(--pointer-deg) at center,
+            black 0%, transparent 8%, transparent 92%, black 100%);
+
+    opacity: calc((var(--pointer-d) - var(--glow-sens)) / (100 - var(--glow-sens)));
+    mix-blend-mode: plus-lighter;
+    transition: opacity 0.3s ease;
+}
+
+.glow::before {
+    content: "";
+    position: absolute;
+    inset: 30px;
+    border-radius: inherit;
+    box-shadow:
+        inset 0 0 0 1px hsl(var(--glow-color) / 100%),
+        inset 0 0 2px 0 hsl(var(--glow-color) / 80%),
+        inset 0 0 5px 0 hsl(var(--glow-color) / 60%),
+        inset 0 0 15px 0 hsl(var(--glow-color) / 40%),
+        inset 0 0 30px 0 hsl(var(--glow-color) / 30%),
+        0 0 2px 0 hsl(var(--glow-color) / 80%),
+        0 0 5px 0 hsl(var(--glow-color) / 60%),
+        0 0 15px 0 hsl(var(--glow-color) / 40%),
+        0 0 30px 0 hsl(var(--glow-color) / 30%),
+        0 0 60px 2px hsl(var(--glow-color) / 20%);
+}
+
+/* 非懸停時隱藏發光 */
+.app:not(:hover) .glow,
+.app:not(:hover)::before {
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+/* ===========================
+   左側：聊天區
+=========================== */
+.chat-left {
+    flex: 1.5;
+    display: flex;
+    flex-direction: column;
+    border-right: 2px solid rgba(209, 211, 212, 0.3);
+    position: relative;
+    background: rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(12px);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
+}
+
+/* 聊天區背景 logo 浮水印 */
+.chat-left::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("logo_clean.png");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 40%;
+    opacity: 0.08;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 標題欄 */
+.chat-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    background: linear-gradient(135deg,
+            rgba(209, 211, 212, 0.15) 0%,
+            rgba(209, 211, 212, 0.15) 100%);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    z-index: 1;
+}
+
+.avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2.5px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 12px rgba(209, 211, 212, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.avatar:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px rgba(209, 211, 212, 0.5);
+}
+
+.avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.title-text h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.title-text h2 {
+    margin: 4px 0 0 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
+/* 訊息區 */
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+}
+
+.messages-content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* 訊息氣泡 */
+.message {
+    background: linear-gradient(135deg,
+            rgba(70, 70, 90, 0.7) 0%,
+            rgba(60, 60, 80, 0.8) 100%);
+    backdrop-filter: blur(10px);
+    color: #f0f0f5;
+    max-width: 75%;
+    padding: 12px 16px;
+    border-radius: 18px 18px 18px 4px;
+    align-self: flex-start;
+    font-size: 15px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.4s ease;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.message-personal {
+    background: linear-gradient(135deg,
+            rgba(209, 211, 212, 0.9) 0%,
+            rgba(209, 211, 212, 0.9) 100%);
+    color: #000;
+    border-radius: 18px 18px 4px 18px;
+    align-self: flex-end;
+    box-shadow: 0 4px 16px rgba(209, 211, 212, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 輸入框區域 */
+.message-box {
+    display: flex;
+    gap: 12px;
+    padding: 16px 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(20, 20, 30, 0.6);
+    backdrop-filter: blur(15px);
+    position: relative;
+    z-index: 1;
+}
+
+.message-input {
+    flex: 1;
+    padding: 14px 18px;
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    font-size: 15px;
+    font-family: inherit;
+    border-radius: 14px;
+    outline: none;
+    resize: none;
+    min-height: 50px;
+    max-height: 120px;
+    transition: all 0.3s ease;
+}
+
+.message-input:focus {
+    border-color: rgba(209, 211, 212, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(209, 211, 212, 0.1);
+}
+
+.message-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.message-submit {
+    padding: 14px 28px;
+    background: var(--primary-gradient);
+    color: #000;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(209, 211, 212, 0.3);
+}
+
+.message-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(209, 211, 212, 0.5);
+    background: var(--primary-gradient);
+}
+
+.message-submit:active {
+    transform: translateY(0);
+}
+
+.message-submit svg {
+    transition: transform 0.3s ease;
+}
+
+.message-submit:hover svg {
+    transform: translateX(3px);
+}
+
+/* ===========================
+   右側：推薦卡片區
+=========================== */
+.chat-right {
+    border-top-right-radius: 0;
+    flex: 1;
+    background: rgba(0, 0, 0, 0.15);
+    /* 和左邊一樣 */
+    backdrop-filter: blur(12px);
+    /* 和左邊一樣 */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-left: 2px solid rgba(209, 211, 212, 0.3);
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.2);
+    /* 原本效果保留 */
+}
+
+.chat-title,
+.recommendation-header {
+    background: rgba(25, 25, 35, 0.92);
+    /* 近似深灰玻璃效果 */
+    backdrop-filter: blur(12px);
+    padding: 18px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+
+
+.recommendation-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+    text-shadow: 0 2px 12px rgba(209, 211, 212, 0.3);
+}
+
+.recommendation-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 推薦卡片 */
+.restaurant-card {
+    background: linear-gradient(135deg,
+            rgba(60, 60, 80, 0.6) 0%,
+            rgba(50, 50, 70, 0.7) 100%);
+    backdrop-filter: blur(12px);
+    padding: 20px 22px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    animation: slideIn 0.4s ease;
+}
+
+.restaurant-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(209, 211, 212, 0.3);
+    border-color: rgba(209, 211, 212, 0.3);
+    background: linear-gradient(135deg,
+            rgba(70, 70, 90, 0.7) 0%,
+            rgba(60, 60, 80, 0.8) 100%);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.restaurant-card .title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-primary);
+}
+
+.restaurant-card .rating {
+    color: #ffd700;
+    font-size: 14px;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.restaurant-card .reason {
+    font-size: 14px;
+    margin-bottom: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.restaurant-card .map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    background: var(--primary-gradient);
+    color: #000;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(209, 211, 212, 0.3);
+}
+
+.restaurant-card .map-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(209, 211, 212, 0.5);
+    background: var(--primary-gradient);
+}
+
+/* 滾動條美化 */
+.messages::-webkit-scrollbar,
+.recommendation-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+.messages::-webkit-scrollbar-track,
+.recommendation-area::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+}
+
+.messages::-webkit-scrollbar-thumb,
+.recommendation-area::-webkit-scrollbar-thumb {
+    background: var(--primary-gradient);
+    border-radius: 10px;
+}
+
+.messages::-webkit-scrollbar-thumb:hover,
+.recommendation-area::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-gradient);
+}
+
+/* ===========================
+   響應式設計
+=========================== */
+@media (max-width: 768px) {
+    .app {
+        flex-direction: column;
+        height: 95vh;
+    }
+
+    .chat-left {
+        flex: 1;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .chat-right {
+        flex: 1;
+    }
+
+    .message,
+    .message-personal {
+        max-width: 85%;
+    }
+}

@@ -48,6 +48,9 @@ output/
 # Environment
 .env
 *.env
+/backend/models/
+/backend/recommender/models/
+hf_cache/
 
 # Jupyter / IPython
 .ipynb_checkpoints/
