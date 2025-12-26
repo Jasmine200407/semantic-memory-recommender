@@ -10,7 +10,7 @@ from recommender.recommend_agent import build_recommend_graph
 
 app = FastAPI()
 
-# === Serve frontend directory ===
+# Serve frontend directory
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BACKEND_DIR)
 frontend_dir = os.path.join(ROOT_DIR, "frontend")
@@ -22,11 +22,11 @@ app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 async def index():
     return FileResponse(os.path.join(frontend_dir, "index.html"))
 
-# === Build Graph ===
+# Build Graph 
 raw_graph = build_recommend_graph()
 graph = raw_graph.compile()
 
-# === WebSocket Chat ===
+# WebSocket Chat
 @app.websocket("/ws")
 async def chat(ws: WebSocket):
     await ws.accept()

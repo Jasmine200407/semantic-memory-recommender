@@ -1,4 +1,4 @@
-/* ========= 發光效果 - 滑鼠追蹤 ========= */
+/* 發光效果(會追蹤滑鼠)*/
 const $app = document.querySelector(".app");
 
 if ($app) {
@@ -156,7 +156,7 @@ function send() {
         input.value = "";
     } catch (error) {
         console.error("[Send] 發送失敗：", error);
-        addMessage("❌ 發送失敗，請重試");
+        addMessage("發送失敗，請重試");
     }
 }
 
@@ -192,12 +192,11 @@ ws.onmessage = (e) => {
             renderCards(msg.data);
         }
         else if (msg.type === "error") {
-            // 錯誤訊息
-            addMessage(`❌ 錯誤：${msg.text}`);
+            addMessage(`錯誤：${msg.text}`);
         }
     } catch (error) {
         console.error("[WS] 解析訊息失敗：", error);
-        addMessage("⚠️ 收到無效的訊息格式");
+        addMessage("收到無效的訊息格式");
     }
 };
 
@@ -209,12 +208,12 @@ ws.onopen = () => {
 
 ws.onerror = (error) => {
     console.error("[WS] WebSocket 錯誤：", error);
-    addMessage("⚠️ 連線發生錯誤");
+    addMessage("連線發生錯誤");
 };
 
 ws.onclose = () => {
     console.log("[WS] WebSocket 連線關閉");
-    addMessage("⚠️ 連線中斷，請重新整理頁面");
+    addMessage("連線中斷，請重新整理頁面");
 };
 
 // 防止意外離開時關閉連線

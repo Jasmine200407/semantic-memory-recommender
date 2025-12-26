@@ -1,7 +1,7 @@
 # db_writer.py
 import datetime
 from db import SessionLocal, Restaurant, Review, Recommendation
-import json  # ⭐ 新增這行
+import json 
 
 def upsert_restaurant(info: dict):
     """
@@ -72,11 +72,10 @@ def insert_recommendation(user_input, location, category, ranked):
     ranked = 排序後完整的推薦清單（含 match_score, positive_rate, summary, reason ...）
     這裡會把：
       1. 前三名的 place_id 存在 top_place_ids
-      2. 整包 ranked 用 JSON 存在 recommendation_json
+      2. 排序後後資料 用 JSON 存在 recommendation_json (含全部評估分數)
     """
     db = SessionLocal()
     try:
-        # 安全一點，避免沒有 place_id 的資料
         top3 = [r.get("place_id") for r in ranked[:3] if r.get("place_id")]
 
         rec = Recommendation(
@@ -84,7 +83,7 @@ def insert_recommendation(user_input, location, category, ranked):
             location=location,
             category=category,
             top_place_ids=",".join(top3),
-            recommendation_json=json.dumps(ranked, ensure_ascii=False),  # ⭐ 存完整結果
+            recommendation_json=json.dumps(ranked, ensure_ascii=False), 
         )
         db.add(rec)
         db.commit()

@@ -7,19 +7,19 @@ import time
 from dotenv import load_dotenv
 
 # ────────────────────────────────
-# ⚙️ 初始化 Gemini
+# 初始化 Gemini
 # ────────────────────────────────
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 
 if not GEMINI_API_KEY:
-    raise ValueError("❌ GEMINI_API_KEY 未設定，請在 .env 或系統環境變數中設置。")
+    raise ValueError("GEMINI_API_KEY 未設定，請在 .env 或系統環境變數中設置。")
 
 genai.configure(api_key=GEMINI_API_KEY)
 
 
 # ────────────────────────────────
-# 🧠 核心函式：生成推薦理由
+# 重點函式：生成推薦理由
 # ────────────────────────────────
 def generate_reason(name, summary, preferences=None, match_score=None):
     preferences = preferences or []
@@ -70,7 +70,7 @@ def call_gemini(prompt: str, model: str = "gemini-2.5-flash", temperature: float
         return ""
 
 # ────────────────────────────────
-# 🧰 LangChain Tool 包裝
+# LangChain Tool 包裝
 # ────────────────────────────────
 class GeminiReasonInput(BaseModel):
     name: str = Field(..., description="餐廳名稱")

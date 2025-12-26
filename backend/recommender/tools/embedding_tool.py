@@ -8,12 +8,12 @@ from sentence_transformers import SentenceTransformer, util
 from transformers import pipeline
 
 # ────────────────────────────────
-# ⚙️ 初始化模型
+# 模型選擇
 # ────────────────────────────────
 EMBED_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 SENTIMENT_MODEL_NAME = "uer/roberta-base-finetuned-dianping-chinese"
 
-# 模型快取資料夾（不會上傳 GitHub）
+# 模型快取資料夾
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 
 def load_embedder():
@@ -30,13 +30,11 @@ def load_embedder():
 
 def load_sentiment_analyzer():
     local_path = os.path.join(MODEL_DIR, "dianping-sentiment")
-    # 🖥️ GPU or CPU 控制在這裡！
     device = 0 if torch.cuda.is_available() else -1
     try:
         if os.path.exists(local_path):
             return pipeline("sentiment-analysis", model=local_path, device=device)
         
-        # ✅ 修正：使用正確的方式傳遞 cache_dir
         # transformers 4.x 版本需要透過 model_kwargs 或直接在 from_pretrained 時設定
         return pipeline(
             "sentiment-analysis", 
@@ -53,7 +51,7 @@ embedder = load_embedder()
 sentiment_analyzer = load_sentiment_analyzer()
 
 # ────────────────────────────────
-# 🧩 產生評論向量並儲存
+# 產生評論向量並儲存
 # ────────────────────────────────
 def encode_reviews_to_vector(reviews, save_path=None):
     """將評論文字轉成 embedding 並快取"""
@@ -70,7 +68,7 @@ def encode_reviews_to_vector(reviews, save_path=None):
 
 
 # ────────────────────────────────
-# 🧮 分析評論內容與偏好語意
+# 分析評論內容與偏好語意
 # ────────────────────────────────
 def analyze_reviews(reviews, preferences):
     """根據偏好語意分析餐廳評論匹配程度與正面率"""
@@ -83,7 +81,7 @@ def analyze_reviews(reviews, preferences):
 
     review_texts = [r.get("text", "") for r in reviews if r.get("text")]
     
-    # ✅ 加入檢查：如果沒有 embedder，使用 fallback
+    # 如果沒有 embedder，使用 fallback
     if not embedder:
         print("[WARN] Embedder 未初始化，使用 fallback 分析")
         return {
@@ -127,7 +125,7 @@ def analyze_reviews(reviews, preferences):
 
 
 # ────────────────────────────────
-# 🧠 LangChain Tool 包裝
+# LangChain Tool 包裝
 # ────────────────────────────────
 class EmbeddingAnalysisInput(BaseModel):
     reviews: list = Field(..., description="評論列表，每項包含 'text'")
