@@ -9,24 +9,28 @@ Foodie Hunter 是一個結合自然語言處理、Google Maps 資料與情感分
 ## 專案結構
 
 ```
-.
 ├── backend/
-│   ├── tools/
-│   │   ├── place_info_tool.py      # Google Places API 工具
-│   │   ├── review_scraper_tool.py  # 評論爬蟲
-│   │   ├── embedding_tool.py       # 語意分析
-│   │   └── gemini_tool.py          # 推薦理由生成
+│   ├── app/
+│   │   ├── data/
+│   │   │   └── app.db                  # SQLite 資料庫檔案
+│   │   ├── db.py                       # SQLAlchemy 資料庫模型
+│   │   ├── db_writer.py                # 資料庫寫入輔助函式
+│   │   └── init_db_run.py              # 資料庫初始化腳本
 │   ├── recommender/
-│   │   └── recommend_agent.py      # LangGraph Agent 主邏輯
-│   ├── db.py                       # 資料庫模型
-│   ├── db_writer.py                # 資料庫寫入邏輯
-│   ├── server.py                   # FastAPI WebSocket 伺服器
-│   └── data/
-│       └── app.db                  # SQLite 資料庫
+│   │   ├── models/                     # NLP 模型快取
+│   │   ├── tools/
+│   │   │   ├── place_info_tool.py      # Google Places API 工具
+│   │   │   ├── review_scraper_tool.py  # Playwright 評論爬蟲
+│   │   │   ├── embedding_tool.py       # Sentence-Transformers 語意分析
+│   │   │   ├── gemini_tool.py          # Gemini LLM 推薦理由生成
+│   │   │   └── test_scraper.py         # 爬蟲測試腳本
+│   │   └── recommend_agent.py          # LangGraph Agent 主邏輯
+│   ├── server.py                       # FastAPI WebSocket 伺服器
+│   └── test_agent.py                   # Agent 測試腳本
 ├── frontend/
-│   ├── index.html                  # 主頁面
-│   ├── script.js                   # WebSocket 與 UI 邏輯
-│   └── style.css                   # 樣式與動畫
+│   ├── index.html                      # 主頁面 HTML
+│   ├── script.js                       # WebSocket 通訊與 UI 邏輯
+│   └── style.css                       # Glassmorphism 樣式與動畫
 └── README.md
 ```
 
