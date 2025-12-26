@@ -35,12 +35,12 @@ Foodie Hunter 是一個結合自然語言處理、Google Maps 資料與情感分
 ```
 
 ## 安裝與執行
-
 1. 安裝相依套件
 ```bash
 pip install -r requirements.txt
 playwright install chromium
 ```
+
 2. 設定環境變數
 
 建立 `.env` 檔案：
@@ -51,12 +51,13 @@ GEMINI_API_KEY=your_gemini_api_key
 
 3. 初始化資料庫
 ```bash
-python init_db_run.py
+cd backend
+python app/init_db_run.py
 ```
 
 4. 啟動伺服器
 ```bash
-python server.py
+uvicorn server:app --reload --host 0.0.0.0 --port 8000
 ```
 
 伺服器將在 `http://localhost:8000` 啟動
